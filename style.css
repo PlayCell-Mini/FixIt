@@ -32,3 +32,11 @@ footer {
   padding: 15px;
   margin-top: 40px;
 }
+
+input, select {
+  padding: 8px;
+  margin: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 200px;
+}
