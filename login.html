@@ -17,12 +17,13 @@
 
   <p>Don’t have an account? <a href="signup.html">Sign Up</a></p>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-  <script src="firebase-config.js"></script>
 
+  <script src="firebase-config.js"></script>
   <script>
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -41,7 +42,6 @@
         const role = docRef.exists ? docRef.data().role : 'unknown';
 
         alert(`Welcome ${role}!`);
-        // Redirect based on role
         if (role === 'provider') {
           window.location.href = 'provider-dashboard.html';
         } else {
