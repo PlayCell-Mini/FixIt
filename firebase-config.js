@@ -1,8 +1,4 @@
-// ✅ Fixit Firebase Configuration (connected to your "bang-bonus" Firebase project)
-
-// Firebase SDK script load karni zaruri hai before this file is called
-// So make sure in index.html, before this file, you add Firebase CDN scripts (shown below)
-
+// Fixit Firebase v8 style config
 const firebaseConfig = {
   apiKey: "AIzaSyCv_Ce8EnmFISrPz9eB-_xx63zEWCEO8jk",
   authDomain: "bang-bonus.firebaseapp.com",
@@ -14,5 +10,5 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const analytics = firebase.analytics(app);
+firebase.initializeApp(firebaseConfig);
+firebase.analytics();
