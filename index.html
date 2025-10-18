@@ -1,23 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Firebase App (core SDK) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-
-<!-- Firebase Analytics (optional but fine) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fixit 🔧 | Find Local Helpers Near You</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Firebase Core + Auth + Firestore -->
+  <!-- Firebase Core + Auth + Firestore + Analytics -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-
 </head>
 
 <body>
@@ -30,8 +23,13 @@
     <h2>Welcome to Fixit</h2>
     <p>Your city’s best plumbers, electricians, tutors & more — all in one place.</p>
 
-    <button id="signup-btn">Signup</button>
-    <button id="login-btn">Login</button>
+    <!-- Buttons with links -->
+    <a href="https://playcell-mini.github.io/FixIt/signup.html">
+      <button id="signup-btn">Signup</button>
+    </a>
+    <a href="https://playcell-mini.github.io/FixIt/login.html">
+      <button id="login-btn">Login</button>
+    </a>
 
     <section id="output"></section>
   </main>
