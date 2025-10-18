@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fixit | Provider Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>🔧 Provider Dashboard</h2>
+
+  <div>
+    <p>Welcome, <span id="provider-email"></span></p>
+
+    <form id="providerForm">
+      <input type="text" id="name" placeholder="Full Name" required /><br>
+      <input type="text" id="service" placeholder="Service Type (e.g., Plumber)" required /><br>
+      <input type="number" id="hourlyRate" placeholder="Hourly Rate" required /><br>
+      <input type="number" id="dailyRate" placeholder="Daily Rate" required /><br>
+      <button type="submit">Save Profile</button>
+    </form>
+
+    <p>Availability: <button id="toggleAvailability">Toggle</button> <span id="availabilityStatus">Unknown</span></p>
+    <button id="logout">Logout</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script>
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Check auth state
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      const docRef = await db.collection('users').doc(user.uid).get();
+      if (!docRef.exists || docRef.data().role !== 'provider') {
+        alert('Access denied!');
+        auth.signOut();
+        window.location.href = "login.html";
+        return;
+      }
+      document.getElementById('provider-email').innerText = user.email;
+
+      // Load profile if exists
+      const profile = await db.collection('providers').doc(user.uid).get();
+      if (profile.exists) {
+        document.getElementById('name').value = profile.data().name;
+        document.getElementById('service').value = profile.data().service;
+        document.getElementById('hourlyRate').value = profile.data().hourlyRate;
+        document.getElementById('dailyRate').value = profile.data().dailyRate;
+        document.getElementById('availabilityStatus').innerText = profile.data().available ? "Available" : "Busy";
+      }
+    });
+
+    // Save profile
+    document.getElementById('providerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      await db.collection('providers').doc(user.uid).set({
+        name: document.getElementById('name').value,
+        service: document.getElementById('service').value,
+        hourlyRate: Number(document.getElementById('hourlyRate').value),
+        dailyRate: Number(document.getElementById('dailyRate').value),
+        available: true
+      });
+      alert('Profile saved!');
+      document.getElementById('availabilityStatus').innerText = "Available";
+    });
+
+    // Toggle availability
+    document.getElementById('toggleAvailability').addEventListener('click', async () => {
+      const user = auth.currentUser;
+      const profileRef = db.collection('providers').doc(user.uid);
+      const profile = await profileRef.get();
+      if (profile.exists) {
+        const newStatus = !profile.data().available;
+        await profileRef.update({ available: newStatus });
+        document.getElementById('availabilityStatus').innerText = newStatus ? "Available" : "Busy";
+      }
+    });
+
+    // Logout
+    document.getElementById('logout').addEventListener('click', () => {
+      auth.signOut();
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
