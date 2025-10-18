@@ -1,12 +1,12 @@
 // Fixit Firebase v8 style config
 const firebaseConfig = {
-  apiKey: "AIzaSyCv_Ce8EnmFISrPz9eB-_xx63zEWCEO8jk",
-  authDomain: "bang-bonus.firebaseapp.com",
-  projectId: "bang-bonus",
-  storageBucket: "bang-bonus.firebasestorage.app",
-  messagingSenderId: "270808547011",
-  appId: "1:270808547011:web:2feb103ce9e891fd7bec76",
-  measurementId: "G-D8TLSF2P2Y"
+  apiKey: "AIzaSyDMEu_L72O4QyQLmzpcgR0-9tvmyAs5fSk",
+  authDomain: "fixit-5d348.firebaseapp.com",
+  projectId: "fixit-5d348",
+  storageBucket: "fixit-5d348.firebasestorage.app",
+  messagingSenderId: "396608887133",
+  appId: "1:396608887133:web:c6fa2d7b0553fa979d70b4",
+  measurementId: "G-W3JJ6BS0JW"
 };
 
 // Initialize Firebase
