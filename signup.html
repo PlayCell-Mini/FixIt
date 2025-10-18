@@ -24,12 +24,13 @@
 
   <p>Already have an account? <a href="login.html">Login</a></p>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-  <script src="firebase-config.js"></script>
 
+  <script src="firebase-config.js"></script>
   <script>
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -51,7 +52,7 @@
           createdAt: new Date()
         });
 
-        alert('Signup successful! Redirecting...');
+        alert('Signup successful! Redirecting to login...');
         window.location.href = 'login.html';
       } catch (error) {
         alert(error.message);
