@@ -512,7 +512,7 @@ body {
 
   .login-container {
     max-width: 70%;
-    align-items: center;
+    align-content: center;
   }
   
   .login-box {
