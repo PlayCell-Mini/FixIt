@@ -483,6 +483,7 @@ body {
   .login-container {
     max-width: 70%;
     padding-top: 8;
+    position: relative;
   }
   
   .login-box {
