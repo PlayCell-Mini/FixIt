@@ -478,9 +478,7 @@ body {
 
 /* Large Desktop (1280px+) */
 @media (min-width: 1280px) {
-  body {
-    padding: 5%;
-  }
+ 
 
   .login-container {
     max-width: 70%;
@@ -510,9 +508,7 @@ body {
 
 /* Desktop (1024px - 1279px) */
 @media (min-width: 1024px) and (max-width: 1279px) {
-  body {
-    padding: 5%;
-  }
+
 
   .login-container {
     max-width: 70%;
