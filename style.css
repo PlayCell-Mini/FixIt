@@ -514,6 +514,7 @@ body {
   .login-container {
     max-width: 70%;
     padding-top: 7%;
+    position: relative;
   }
   
   .login-box {
