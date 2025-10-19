@@ -298,6 +298,21 @@ body {
   margin-bottom: 24px;
 }
 
+/* Form Grid Layout for Signup */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Button Container */
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
 /* Input Groups */
 .input-group {
   margin-bottom: 24px;
@@ -464,7 +479,7 @@ body {
 /* Large Desktop (1280px+) */
 @media (min-width: 1280px) {
   .login-container {
-    max-width: 480px;
+    max-width: 540px;
   }
   
   .login-box {
@@ -478,12 +493,21 @@ body {
   .login-subtitle {
     font-size: 18px;
   }
+  
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .form-grid .input-group {
+    margin-bottom: 0;
+  }
 }
 
 /* Desktop (1024px - 1279px) */
 @media (min-width: 1024px) and (max-width: 1279px) {
   .login-container {
-    max-width: 460px;
+    max-width: 520px;
   }
   
   .login-box {
@@ -492,6 +516,15 @@ body {
   
   .login-title {
     font-size: 30px;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .form-grid .input-group {
+    margin-bottom: 0;
   }
 }
 
