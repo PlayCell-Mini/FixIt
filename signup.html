@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fixit | Sign Up</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts for better typography -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -12,21 +13,21 @@
     <div class="login-box">
       <div class="login-header">
         <h1 class="login-title">Create Your Account</h1>
-        <p class="login-subtitle">Join Fixit and start your journey</p>
+        <p class="login-subtitle">Join us today and get started with your journey</p>
       </div>
-
+      
       <form id="signupForm" class="login-form">
         <div class="input-group">
-          <label for="name" class="input-label">Full Name</label>
+          <label for="fullName" class="input-label">Full Name</label>
           <input 
             type="text" 
-            id="name" 
+            id="fullName" 
             class="form-input" 
             placeholder="Enter your full name" 
             required 
           />
         </div>
-
+        
         <div class="input-group">
           <label for="email" class="input-label">Email Address</label>
           <input 
@@ -37,18 +38,18 @@
             required 
           />
         </div>
-
+        
         <div class="input-group">
           <label for="password" class="input-label">Password</label>
           <input 
             type="password" 
             id="password" 
             class="form-input" 
-            placeholder="Enter your password" 
+            placeholder="Create a strong password" 
             required 
           />
         </div>
-
+        
         <div class="input-group">
           <label for="confirmPassword" class="input-label">Confirm Password</label>
           <input 
@@ -59,25 +60,25 @@
             required 
           />
         </div>
-
+        
         <div class="input-group">
-          <label for="role" class="input-label">Select Role</label>
-          <select id="role" class="form-input" required>
-            <option value="">-- Choose Role --</option>
-            <option value="provider">Provider</option>
-            <option value="owner">Owner</option>
+          <label for="role" class="input-label">I am a:</label>
+          <select id="role" class="form-select" required>
+            <option value="">Select your role</option>
+            <option value="seeker">Service Owner</option>
+            <option value="provider">Service Provider</option>
           </select>
         </div>
-
+        
         <button type="submit" class="login-button">
           <span class="button-text">Create Account</span>
         </button>
       </form>
-
+      
       <div class="login-footer">
         <p class="signup-text">
-          Already have an account?
-          <a href="login.html" class="signup-link">Login</a>
+          Already have an account? 
+          <a href="login.html" class="signup-link">Sign In</a>
         </p>
       </div>
     </div>
@@ -94,27 +95,33 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // Get DOM elements
     const signupForm = document.getElementById('signupForm');
     const signupButton = document.querySelector('.login-button');
-    const nameInput = document.getElementById('name');
+    const fullNameInput = document.getElementById('fullName');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirmPassword');
     const roleSelect = document.getElementById('role');
 
-    // Add focus effects
+    // Add smooth focus effects
     function addFocusEffects() {
-      const inputs = [nameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect];
+      const inputs = [fullNameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect];
+      
       inputs.forEach(input => {
         input.addEventListener('focus', function() {
           this.parentElement.classList.add('focused');
         });
+        
         input.addEventListener('blur', function() {
-          if (!this.value) this.parentElement.classList.remove('focused');
+          if (!this.value) {
+            this.parentElement.classList.remove('focused');
+          }
         });
       });
     }
 
+    // Add loading state to button
     function setLoadingState(isLoading) {
       if (isLoading) {
         signupButton.classList.add('loading');
@@ -125,10 +132,15 @@
       }
     }
 
+    // Show error message with smooth animation
     function showError(message) {
+      // Remove existing error message
       const existingError = document.querySelector('.error-message');
-      if (existingError) existingError.remove();
+      if (existingError) {
+        existingError.remove();
+      }
 
+      // Create new error message
       const errorDiv = document.createElement('div');
       errorDiv.className = 'error-message';
       errorDiv.textContent = message;
@@ -143,6 +155,7 @@
         animation: slideIn 0.3s ease;
       `;
 
+      // Add CSS animation
       const style = document.createElement('style');
       style.textContent = `
         @keyframes slideIn {
@@ -152,7 +165,10 @@
       `;
       document.head.appendChild(style);
 
+      // Insert error message
       signupForm.insertBefore(errorDiv, signupForm.firstChild);
+      
+      // Auto remove after 5 seconds
       setTimeout(() => {
         if (errorDiv.parentNode) {
           errorDiv.style.animation = 'slideIn 0.3s ease reverse';
@@ -161,28 +177,108 @@
       }, 5000);
     }
 
+    // Show success message
+    function showSuccess(message) {
+      const successDiv = document.createElement('div');
+      successDiv.className = 'success-message';
+      successDiv.textContent = message;
+      successDiv.style.cssText = `
+        background: #c6f6d5;
+        color: #22543d;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border: 1px solid #9ae6b4;
+        animation: slideIn 0.3s ease;
+      `;
+
+      signupForm.insertBefore(successDiv, signupForm.firstChild);
+    }
+
+    // Password strength validation
+    function validatePassword(password) {
+      const minLength = 8;
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumbers = /\d/.test(password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      if (password.length < minLength) {
+        return 'Password must be at least 8 characters long';
+      }
+      if (!hasUpperCase) {
+        return 'Password must contain at least one uppercase letter';
+      }
+      if (!hasLowerCase) {
+        return 'Password must contain at least one lowercase letter';
+      }
+      if (!hasNumbers) {
+        return 'Password must contain at least one number';
+      }
+      if (!hasSpecialChar) {
+        return 'Password must contain at least one special character';
+      }
+      return null;
+    }
+
+    // Real-time password confirmation validation
+    function validatePasswordMatch() {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      
+      if (confirmPassword && password !== confirmPassword) {
+        confirmPasswordInput.style.borderColor = '#e53e3e';
+        return false;
+      } else {
+        confirmPasswordInput.style.borderColor = '#e2e8f0';
+        return true;
+      }
+    }
+
+    // Add real-time validation
+    confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+    passwordInput.addEventListener('input', validatePasswordMatch);
+
+    // Form submission handler
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      const name = nameInput.value.trim();
+      
+      const fullName = fullNameInput.value.trim();
       const email = emailInput.value.trim();
       const password = passwordInput.value;
       const confirmPassword = confirmPasswordInput.value;
       const role = roleSelect.value;
 
-      if (!name || !email || !password || !confirmPassword || !role) {
+      // Basic validation
+      if (!fullName || !email || !password || !confirmPassword || !role) {
         showError('Please fill in all fields');
         return;
       }
 
-      if (password !== confirmPassword) {
-        showError('Passwords do not match');
+      // Full name validation
+      if (fullName.length < 2) {
+        showError('Please enter a valid full name');
         return;
       }
 
+      // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         showError('Please enter a valid email address');
+        return;
+      }
+
+      // Password validation
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        showError(passwordError);
+        return;
+      }
+
+      // Password confirmation validation
+      if (password !== confirmPassword) {
+        showError('Passwords do not match');
         return;
       }
 
@@ -192,46 +288,70 @@
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        await db.collection('users').doc(user.uid).set({
-          name,
-          email,
-          role,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        // Update user profile with display name
+        await user.updateProfile({
+          displayName: fullName
         });
 
+        // Save user data to Firestore
+        await db.collection('users').doc(user.uid).set({
+          fullName: fullName,
+          email: user.email,
+          role: role,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+
+        // Show success message
+        showSuccess('Account created successfully! Redirecting to login...');
         signupButton.textContent = 'Account Created!';
         signupButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
-
+        
         setTimeout(() => {
-          if (role === 'provider') {
-            window.location.href = 'provider-dashboard.html';
-          } else {
-            window.location.href = 'owner-dashboard.html';
-          }
-        }, 1000);
+          window.location.href = 'login.html';
+        }, 2000);
 
       } catch (error) {
         setLoadingState(false);
+        
+        // Handle specific error messages
         let errorMessage = 'An error occurred. Please try again.';
-
+        
         switch (error.code) {
           case 'auth/email-already-in-use':
-            errorMessage = 'This email is already in use.';
+            errorMessage = 'An account with this email already exists.';
             break;
           case 'auth/invalid-email':
-            errorMessage = 'Invalid email format.';
+            errorMessage = 'Please enter a valid email address.';
             break;
           case 'auth/weak-password':
-            errorMessage = 'Password should be at least 6 characters.';
+            errorMessage = 'Password is too weak. Please choose a stronger password.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Account creation is currently disabled.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection.';
             break;
           default:
-            errorMessage = error.message;
+            errorMessage = error.message || errorMessage;
         }
+        
         showError(errorMessage);
       }
     });
 
+    // Initialize focus effects
     addFocusEffects();
+
+    // Add enter key support for better UX
+    [fullNameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect].forEach(input => {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          signupForm.dispatchEvent(new Event('submit'));
+        }
+      });
+    });
   </script>
 </body>
 </html>
