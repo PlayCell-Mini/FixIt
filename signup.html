@@ -7,129 +7,6 @@
   <link rel="stylesheet" href="style.css" />
   <!-- Google Fonts for better typography -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    /* ===== Additional layout styles for signup page ===== */
-
-    .login-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background: #f9fafb;
-      font-family: 'Inter', sans-serif;
-    }
-
-    .login-box {
-      background: #fff;
-      padding: 40px 50px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-      width: 480px; /* slightly wider */
-      max-width: 95%;
-      transition: all 0.3s ease;
-    }
-
-    .login-header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .login-title {
-      font-size: 1.8rem;
-      color: #2d3748;
-      margin-bottom: 6px;
-    }
-
-    .login-subtitle {
-      color: #718096;
-      font-size: 0.95rem;
-    }
-
-    /* Two-column layout for inputs */
-    .row {
-      display: flex;
-      gap: 16px;
-      width: 100%;
-    }
-
-    .row .input-group {
-      flex: 1;
-    }
-
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 18px;
-    }
-
-    .input-label {
-      font-weight: 500;
-      margin-bottom: 6px;
-      color: #4a5568;
-      font-size: 0.9rem;
-    }
-
-    .form-input, .form-select {
-      padding: 12px 14px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      transition: border 0.2s ease;
-    }
-
-    .form-input:focus, .form-select:focus {
-      border-color: #3182ce;
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(66,153,225,0.2);
-    }
-
-    .login-button {
-      width: 100%;
-      padding: 12px;
-      background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-top: 10px;
-      transition: background 0.3s ease, transform 0.2s ease;
-    }
-
-    .login-button:hover {
-      background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
-      transform: translateY(-2px);
-    }
-
-    .login-footer {
-      text-align: center;
-      margin-top: 25px;
-      font-size: 0.9rem;
-      color: #4a5568;
-    }
-
-    .signup-link {
-      color: #3182ce;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .signup-link:hover {
-      text-decoration: underline;
-    }
-
-    /* Responsive stacking */
-    @media (max-width: 600px) {
-      .row {
-        flex-direction: column;
-        gap: 0;
-      }
-      .login-box {
-        padding: 30px 25px;
-      }
-    }
-  </style>
 </head>
 <body>
   <div class="login-container">
@@ -140,58 +17,50 @@
       </div>
       
       <form id="signupForm" class="login-form">
-        
-        <!-- Row 1: Name + Email -->
-        <div class="row">
-          <div class="input-group">
-            <label for="fullName" class="input-label">Full Name</label>
-            <input 
-              type="text" 
-              id="fullName" 
-              class="form-input" 
-              placeholder="Enter your full name" 
-              required 
-            />
-          </div>
-          
-          <div class="input-group">
-            <label for="email" class="input-label">Email Address</label>
-            <input 
-              type="email" 
-              id="email" 
-              class="form-input" 
-              placeholder="Enter your email address" 
-              required 
-            />
-          </div>
-        </div>
-
-        <!-- Row 2: Password + Confirm Password -->
-        <div class="row">
-          <div class="input-group">
-            <label for="password" class="input-label">Password</label>
-            <input 
-              type="password" 
-              id="password" 
-              class="form-input" 
-              placeholder="Create a strong password" 
-              required 
-            />
-          </div>
-          
-          <div class="input-group">
-            <label for="confirmPassword" class="input-label">Confirm Password</label>
-            <input 
-              type="password" 
-              id="confirmPassword" 
-              class="form-input" 
-              placeholder="Confirm your password" 
-              required 
-            />
-          </div>
+        <div class="input-group">
+          <label for="fullName" class="input-label">Full Name</label>
+          <input 
+            type="text" 
+            id="fullName" 
+            class="form-input" 
+            placeholder="Enter your full name" 
+            required 
+          />
         </div>
         
-        <!-- Role Dropdown -->
+        <div class="input-group">
+          <label for="email" class="input-label">Email Address</label>
+          <input 
+            type="email" 
+            id="email" 
+            class="form-input" 
+            placeholder="Enter your email address" 
+            required 
+          />
+        </div>
+        
+        <div class="input-group">
+          <label for="password" class="input-label">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input" 
+            placeholder="Create a strong password" 
+            required 
+          />
+        </div>
+        
+        <div class="input-group">
+          <label for="confirmPassword" class="input-label">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            class="form-input" 
+            placeholder="Confirm your password" 
+            required 
+          />
+        </div>
+        
         <div class="input-group">
           <label for="role" class="input-label">I am a:</label>
           <select id="role" class="form-select" required>
@@ -201,7 +70,6 @@
           </select>
         </div>
         
-        <!-- Create Account Button -->
         <button type="submit" class="login-button">
           <span class="button-text">Create Account</span>
         </button>
@@ -227,6 +95,7 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // Get DOM elements
     const signupForm = document.getElementById('signupForm');
     const signupButton = document.querySelector('.login-button');
     const fullNameInput = document.getElementById('fullName');
@@ -235,12 +104,15 @@
     const confirmPasswordInput = document.getElementById('confirmPassword');
     const roleSelect = document.getElementById('role');
 
+    // Add smooth focus effects
     function addFocusEffects() {
       const inputs = [fullNameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect];
+      
       inputs.forEach(input => {
         input.addEventListener('focus', function() {
           this.parentElement.classList.add('focused');
         });
+        
         input.addEventListener('blur', function() {
           if (!this.value) {
             this.parentElement.classList.remove('focused');
@@ -249,6 +121,7 @@
       });
     }
 
+    // Add loading state to button
     function setLoadingState(isLoading) {
       if (isLoading) {
         signupButton.classList.add('loading');
@@ -259,9 +132,15 @@
       }
     }
 
+    // Show error message with smooth animation
     function showError(message) {
+      // Remove existing error message
       const existingError = document.querySelector('.error-message');
-      if (existingError) existingError.remove();
+      if (existingError) {
+        existingError.remove();
+      }
+
+      // Create new error message
       const errorDiv = document.createElement('div');
       errorDiv.className = 'error-message';
       errorDiv.textContent = message;
@@ -275,6 +154,8 @@
         border: 1px solid #feb2b2;
         animation: slideIn 0.3s ease;
       `;
+
+      // Add CSS animation
       const style = document.createElement('style');
       style.textContent = `
         @keyframes slideIn {
@@ -283,7 +164,11 @@
         }
       `;
       document.head.appendChild(style);
+
+      // Insert error message
       signupForm.insertBefore(errorDiv, signupForm.firstChild);
+      
+      // Auto remove after 5 seconds
       setTimeout(() => {
         if (errorDiv.parentNode) {
           errorDiv.style.animation = 'slideIn 0.3s ease reverse';
@@ -292,6 +177,7 @@
       }, 5000);
     }
 
+    // Show success message
     function showSuccess(message) {
       const successDiv = document.createElement('div');
       successDiv.className = 'success-message';
@@ -306,26 +192,41 @@
         border: 1px solid #9ae6b4;
         animation: slideIn 0.3s ease;
       `;
+
       signupForm.insertBefore(successDiv, signupForm.firstChild);
     }
 
+    // Password strength validation
     function validatePassword(password) {
       const minLength = 8;
       const hasUpperCase = /[A-Z]/.test(password);
       const hasLowerCase = /[a-z]/.test(password);
       const hasNumbers = /\d/.test(password);
       const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-      if (password.length < minLength) return 'Password must be at least 8 characters long';
-      if (!hasUpperCase) return 'Password must contain at least one uppercase letter';
-      if (!hasLowerCase) return 'Password must contain at least one lowercase letter';
-      if (!hasNumbers) return 'Password must contain at least one number';
-      if (!hasSpecialChar) return 'Password must contain at least one special character';
+
+      if (password.length < minLength) {
+        return 'Password must be at least 8 characters long';
+      }
+      if (!hasUpperCase) {
+        return 'Password must contain at least one uppercase letter';
+      }
+      if (!hasLowerCase) {
+        return 'Password must contain at least one lowercase letter';
+      }
+      if (!hasNumbers) {
+        return 'Password must contain at least one number';
+      }
+      if (!hasSpecialChar) {
+        return 'Password must contain at least one special character';
+      }
       return null;
     }
 
+    // Real-time password confirmation validation
     function validatePasswordMatch() {
       const password = passwordInput.value;
       const confirmPassword = confirmPasswordInput.value;
+      
       if (confirmPassword && password !== confirmPassword) {
         confirmPasswordInput.style.borderColor = '#e53e3e';
         return false;
@@ -335,35 +236,47 @@
       }
     }
 
+    // Add real-time validation
     confirmPasswordInput.addEventListener('input', validatePasswordMatch);
     passwordInput.addEventListener('input', validatePasswordMatch);
 
+    // Form submission handler
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
       const fullName = fullNameInput.value.trim();
       const email = emailInput.value.trim();
       const password = passwordInput.value;
       const confirmPassword = confirmPasswordInput.value;
       const role = roleSelect.value;
 
+      // Basic validation
       if (!fullName || !email || !password || !confirmPassword || !role) {
         showError('Please fill in all fields');
         return;
       }
+
+      // Full name validation
       if (fullName.length < 2) {
         showError('Please enter a valid full name');
         return;
       }
+
+      // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         showError('Please enter a valid email address');
         return;
       }
+
+      // Password validation
       const passwordError = validatePassword(password);
       if (passwordError) {
         showError(passwordError);
         return;
       }
+
+      // Password confirmation validation
       if (password !== confirmPassword) {
         showError('Passwords do not match');
         return;
@@ -375,40 +288,68 @@
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        await user.updateProfile({ displayName: fullName });
+        // Update user profile with display name
+        await user.updateProfile({
+          displayName: fullName
+        });
 
+        // Save user data to Firestore
         await db.collection('users').doc(user.uid).set({
-          fullName,
+          fullName: fullName,
           email: user.email,
-          role,
+          role: role,
           createdAt: new Date(),
           updatedAt: new Date()
         });
 
+        // Show success message
         showSuccess('Account created successfully! Redirecting to login...');
         signupButton.textContent = 'Account Created!';
         signupButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
-        setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+        
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
 
       } catch (error) {
         setLoadingState(false);
+        
+        // Handle specific error messages
         let errorMessage = 'An error occurred. Please try again.';
+        
         switch (error.code) {
-          case 'auth/email-already-in-use': errorMessage = 'An account with this email already exists.'; break;
-          case 'auth/invalid-email': errorMessage = 'Please enter a valid email address.'; break;
-          case 'auth/weak-password': errorMessage = 'Password is too weak. Please choose a stronger password.'; break;
-          case 'auth/operation-not-allowed': errorMessage = 'Account creation is currently disabled.'; break;
-          case 'auth/network-request-failed': errorMessage = 'Network error. Please check your connection.'; break;
-          default: errorMessage = error.message || errorMessage;
+          case 'auth/email-already-in-use':
+            errorMessage = 'An account with this email already exists.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'Password is too weak. Please choose a stronger password.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Account creation is currently disabled.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
         }
+        
         showError(errorMessage);
       }
     });
 
+    // Initialize focus effects
     addFocusEffects();
+
+    // Add enter key support for better UX
     [fullNameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect].forEach(input => {
       input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') signupForm.dispatchEvent(new Event('submit'));
+        if (e.key === 'Enter') {
+          signupForm.dispatchEvent(new Event('submit'));
+        }
       });
     });
   </script>
