@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fixit 🔧 | Find Local Helpers Near You</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts for better typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Firebase Core + Auth + Firestore + Analytics -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -14,31 +16,103 @@
 </head>
 
 <body>
-  <header>
-    <h1>Fixit 🔧</h1>
-    <p>Find trusted local service providers easily.</p>
-  </header>
+  <div class="homepage-container">
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+      <div class="mobile-nav-header">
+        <h1 class="mobile-logo">Fixit 🔧</h1>
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle menu">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
+      <div class="mobile-nav-menu" id="mobileNavMenu">
+        <a href="signup.html" class="mobile-nav-link">Sign Up</a>
+        <a href="login.html" class="mobile-nav-link">Login</a>
+      </div>
+    </nav>
 
-  <main>
-    <h2>Welcome to Fixit</h2>
-    <p>Your city’s best plumbers, electricians, tutors & more — all in one place.</p>
+    <!-- Desktop Header -->
+    <header class="desktop-header">
+      <div class="header-content">
+        <h1>Fixit 🔧</h1>
+        <p>Find trusted local service providers easily.</p>
+      </div>
+    </header>
 
-    <!-- Buttons with links -->
-    <a href="https://playcell-mini.github.io/FixIt/signup.html">
-      <button id="signup-btn">Signup</button>
-    </a>
-    <a href="https://playcell-mini.github.io/FixIt/login.html">
-      <button id="login-btn">Login</button>
-    </a>
+    <main class="main-content">
+      <div class="hero-section">
+        <h2>Welcome to Fixit</h2>
+        <p>Your city's best plumbers, electricians, tutors & more — all in one place.</p>
+      </div>
 
-    <section id="output"></section>
-  </main>
+      <div class="action-buttons">
+        <a href="signup.html" class="btn-link">
+          <button class="action-btn primary-btn" id="signup-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <path d="M20 8v6"></path>
+              <path d="M23 11h-6"></path>
+            </svg>
+            Sign Up
+          </button>
+        </a>
+        <a href="login.html" class="btn-link">
+          <button class="action-btn secondary-btn" id="login-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10,17 15,12 10,7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            Login
+          </button>
+        </a>
+      </div>
 
-  <footer>
-    <p>© 2025 Fixit | Built with ❤️ for local communities</p>
-  </footer>
+      <section id="output" class="output-section"></section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2025 Fixit | Built with ❤️ for local communities</p>
+    </footer>
+  </div>
 
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Mobile navigation functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const mobileNavMenu = document.getElementById('mobileNavMenu');
+      const mobileNav = document.getElementById('mobileNav');
+
+      hamburgerBtn.addEventListener('click', function() {
+        mobileNavMenu.classList.toggle('active');
+        hamburgerBtn.classList.toggle('active');
+        mobileNav.classList.toggle('menu-open');
+      });
+
+      // Close menu when clicking on links
+      const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+      mobileNavLinks.forEach(link => {
+        link.addEventListener('click', function() {
+          mobileNavMenu.classList.remove('active');
+          hamburgerBtn.classList.remove('active');
+          mobileNav.classList.remove('menu-open');
+        });
+      });
+
+      // Close menu when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!mobileNav.contains(event.target)) {
+          mobileNavMenu.classList.remove('active');
+          hamburgerBtn.classList.remove('active');
+          mobileNav.classList.remove('menu-open');
+        }
+      });
+    });
+  </script>
 </body>
 </html>
