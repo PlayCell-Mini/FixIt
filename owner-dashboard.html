@@ -115,6 +115,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
   <script src="firebase-config.js"></script>
   <script>
@@ -513,7 +514,10 @@
       }
 
       editProfile() {
-        this.showNotification('Edit profile feature coming soon!', 'info');
+        const modal = document.getElementById('editProfileModal');
+        const overlay = document.getElementById('modalOverlay');
+        modal.classList.add('show');
+        overlay.classList.add('show');
       }
 
       logout() {
@@ -554,6 +558,132 @@
 
     // Initialize dashboard
     const dashboard = new OwnerDashboard();
+
+    // Edit Profile Modal (injected) with image upload + pricing
+    (function ensureEditProfileModal() {
+      if (document.getElementById('editProfileModal')) return;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `
+        <div class=\"modal-overlay\" id=\"modalOverlay\"></div>
+        <div class=\"modal\" id=\"editProfileModal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"editProfileTitle\">
+          <div class=\"modal-header\">
+            <h3 id=\"editProfileTitle\">Edit Profile</h3>
+            <button class=\"modal-close\" id=\"closeProfileModal\" aria-label=\"Close\">×</button>
+          </div>
+          <div class=\"modal-body\">
+            <div class=\"edit-profile-grid\">
+              <div class=\"avatar-uploader\">
+                <div class=\"avatar-preview\">
+                  <img id=\"editAvatarPreview\" src=\"https://via.placeholder.com/120x120/667eea/ffffff?text=O\" alt=\"Preview\" />
+                </div>
+                <input type=\"file\" id=\"avatarInput\" accept=\"image/png, image/jpeg\" />
+                <small class=\"hint\">PNG/JPG up to ~2MB</small>
+              </div>
+              <div class=\"profile-fields\">
+                <label class=\"field\">
+                  <span>Full Name</span>
+                  <input type=\"text\" id=\"editName\" placeholder=\"Your name\" />
+                </label>
+                <div class=\"field-row\">
+                  <label class=\"field\">
+                    <span>Hourly Rate ($)</span>
+                    <input type=\"number\" id=\"editHourly\" min=\"0\" step=\"1\" placeholder=\"e.g. 25\" />
+                  </label>
+                  <label class=\"field\">
+                    <span>Daily Rate ($)</span>
+                    <input type=\"number\" id=\"editDaily\" min=\"0\" step=\"1\" placeholder=\"e.g. 150\" />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class=\"modal-footer\">
+            <button class=\"btn btn-secondary\" id=\"cancelProfileModal\">Cancel</button>
+            <button class=\"btn btn-primary\" id=\"saveProfileBtn\">Save Changes</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(wrapper);
+
+      const overlay = document.getElementById('modalOverlay');
+      const modal = document.getElementById('editProfileModal');
+      const closeBtn = document.getElementById('closeProfileModal');
+      const cancelBtn = document.getElementById('cancelProfileModal');
+      const avatarInput = document.getElementById('avatarInput');
+      const previewImg = document.getElementById('editAvatarPreview');
+      const saveBtn = document.getElementById('saveProfileBtn');
+
+      function closeModal() {
+        overlay.classList.remove('show');
+        modal.classList.remove('show');
+      }
+
+      overlay.addEventListener('click', closeModal);
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      // Prefill
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) return;
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const data = userDoc.exists ? userDoc.data() : {};
+        document.getElementById('editName').value = data.fullName || '';
+        document.getElementById('editHourly').value = data.hourlyRate || '';
+        document.getElementById('editDaily').value = data.dailyRate || '';
+        if (data.profileImage) previewImg.src = data.profileImage;
+      });
+
+      // Preview selection
+      avatarInput.addEventListener('change', () => {
+        const file = avatarInput.files && avatarInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previewImg.src = e.target.result;
+          const headerImg = document.getElementById('profileImage');
+          if (headerImg) headerImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Save to Firestore (users) and Storage
+      saveBtn.addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const fullName = (document.getElementById('editName').value || '').trim();
+        const hourlyRate = Number(document.getElementById('editHourly').value || 0);
+        const dailyRate = Number(document.getElementById('editDaily').value || 0);
+
+        const updateData = {
+          fullName,
+          hourlyRate,
+          dailyRate,
+          updatedAt: new Date()
+        };
+
+        try {
+          const file = avatarInput.files && avatarInput.files[0];
+          if (file) {
+            const storageRef = firebase.storage().ref();
+            const fileRef = storageRef.child(`profileImages/${user.uid}`);
+            await fileRef.put(file);
+            const url = await fileRef.getDownloadURL();
+            updateData.profileImage = url;
+            const headerImg = document.getElementById('profileImage');
+            if (headerImg) headerImg.src = url;
+          }
+
+          await db.collection('users').doc(user.uid).set(updateData, { merge: true });
+          if (fullName) document.getElementById('ownerName').textContent = fullName;
+          dashboard.showNotification('Profile updated', 'success');
+          closeModal();
+        } catch (err) {
+          console.error(err);
+          dashboard.showNotification('Failed to update profile', 'error');
+        }
+      });
+    })();
   </script>
 </body>
 </html>
