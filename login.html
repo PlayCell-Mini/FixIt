@@ -5,17 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fixit | Login</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts for better typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h2>🔑 Login to Fixit</h2>
-
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required /><br>
-    <input type="password" id="password" placeholder="Password" required /><br>
-    <button type="submit">Login</button>
-  </form>
-
-  <p>Don’t have an account? <a href="signup.html">Sign Up</a></p>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="login-header">
+        <h1 class="login-title">Login to Your Account</h1>
+        <p class="login-subtitle">Welcome back! Please sign in to continue</p>
+      </div>
+      
+      <form id="loginForm" class="login-form">
+        <div class="input-group">
+          <label for="email" class="input-label">Email Address</label>
+          <input 
+            type="email" 
+            id="email" 
+            class="form-input" 
+            placeholder="Enter your email address" 
+            required 
+          />
+        </div>
+        
+        <div class="input-group">
+          <label for="password" class="input-label">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input" 
+            placeholder="Enter your password" 
+            required 
+          />
+        </div>
+        
+        <button type="submit" class="login-button">
+          <span class="button-text">Sign In</span>
+        </button>
+      </form>
+      
+      <div class="login-footer">
+        <p class="signup-text">
+          Don't have an account? 
+          <a href="signup.html" class="signup-link">Sign Up</a>
+        </p>
+      </div>
+    </div>
+  </div>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -28,28 +64,170 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    // Get DOM elements
+    const loginForm = document.getElementById('loginForm');
+    const loginButton = document.querySelector('.login-button');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
 
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+    // Add smooth focus effects
+    function addFocusEffects() {
+      const inputs = [emailInput, passwordInput];
+      
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+          if (!this.value) {
+            this.parentElement.classList.remove('focused');
+          }
+        });
+      });
+    }
+
+    // Add loading state to button
+    function setLoadingState(isLoading) {
+      if (isLoading) {
+        loginButton.classList.add('loading');
+        loginButton.disabled = true;
+      } else {
+        loginButton.classList.remove('loading');
+        loginButton.disabled = false;
+      }
+    }
+
+    // Show error message with smooth animation
+    function showError(message) {
+      // Remove existing error message
+      const existingError = document.querySelector('.error-message');
+      if (existingError) {
+        existingError.remove();
+      }
+
+      // Create new error message
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.textContent = message;
+      errorDiv.style.cssText = `
+        background: #fed7d7;
+        color: #c53030;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border: 1px solid #feb2b2;
+        animation: slideIn 0.3s ease;
+      `;
+
+      // Add CSS animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Insert error message
+      loginForm.insertBefore(errorDiv, loginForm.firstChild);
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        if (errorDiv.parentNode) {
+          errorDiv.style.animation = 'slideIn 0.3s ease reverse';
+          setTimeout(() => errorDiv.remove(), 300);
+        }
+      }, 5000);
+    }
+
+    // Form submission handler
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      // Basic validation
+      if (!email || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showError('Please enter a valid email address');
+        return;
+      }
+
+      setLoadingState(true);
 
       try {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
+        // Get user role from Firestore
         const docRef = await db.collection('users').doc(user.uid).get();
         const role = docRef.exists ? docRef.data().role : 'unknown';
 
-        alert(`Welcome ${role}!`);
-        if (role === 'provider') {
-          window.location.href = 'provider-dashboard.html';
-        } else {
-          window.location.href = 'seeker-dashboard.html';
-        }
+        // Show success message briefly
+        loginButton.textContent = 'Welcome!';
+        loginButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+        
+        setTimeout(() => {
+          if (role === 'provider') {
+            window.location.href = 'provider-dashboard.html';
+          } else {
+            window.location.href = 'seeker-dashboard.html';
+          }
+        }, 1000);
+
       } catch (error) {
-        alert(error.message);
+        setLoadingState(false);
+        
+        // Handle specific error messages
+        let errorMessage = 'An error occurred. Please try again.';
+        
+        switch (error.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email address.';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'Incorrect password. Please try again.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'This account has been disabled.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed attempts. Please try again later.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
+        }
+        
+        showError(errorMessage);
       }
+    });
+
+    // Initialize focus effects
+    addFocusEffects();
+
+    // Add enter key support for better UX
+    [emailInput, passwordInput].forEach(input => {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          loginForm.dispatchEvent(new Event('submit'));
+        }
+      });
     });
   </script>
 </body>
