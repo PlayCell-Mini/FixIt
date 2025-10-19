@@ -507,7 +507,7 @@ body {
 /* Desktop (1024px - 1279px) */
 @media (min-width: 1024px) and (max-width: 1279px) {
   .login-container {
-    max-width: 520px;
+    max-width: 620px;
   }
   
   .login-box {
