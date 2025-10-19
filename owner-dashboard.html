@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fixit | Seeker Dashboard</title>
+  <title>Fixit | Service Owner Dashboard</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>🔍 Seeker Dashboard</h2>
+  <h2>🔍 Service Owner Dashboard</h2>
 
   <div>
-    <p>Welcome, <span id="seeker-email"></span></p>
+    <p>Welcome, <span id="owner-email"></span></p>
     <select id="serviceFilter">
       <option value="">Select Service</option>
       <option value="Plumber">Plumber</option>
@@ -47,7 +47,7 @@
         window.location.href = "login.html";
         return;
       }
-      document.getElementById('seeker-email').innerText = user.email;
+      document.getElementById('owner-email').innerText = user.email;
     });
 
     // Search providers
@@ -83,7 +83,7 @@
       const user = auth.currentUser;
       await db.collection('jobs').add({
         providerId: providerId,
-        seekerId: user.uid,
+        ownerId: user.uid,
         status: 'pending',
         createdAt: new Date()
       });
