@@ -82,7 +82,8 @@ body {
   letter-spacing: 0.025em;
 }
 
-.form-input {
+.form-input,
+.form-select {
   width: 100%;
   padding: 16px 20px;
   border: 2px solid #e2e8f0;
@@ -93,6 +94,8 @@ body {
   color: #2d3748;
   transition: all 0.3s ease;
   outline: none;
+  appearance: none;
+  cursor: pointer;
 }
 
 .form-input::placeholder {
@@ -100,7 +103,8 @@ body {
   font-weight: 400;
 }
 
-.form-input:focus {
+.form-input:focus,
+.form-select:focus {
   border-color: #667eea;
   box-shadow: 
     0 0 0 3px rgba(102, 126, 234, 0.1),
@@ -108,8 +112,27 @@ body {
   transform: translateY(-1px);
 }
 
-.form-input:hover {
+.form-input:hover,
+.form-select:hover {
   border-color: #cbd5e0;
+}
+
+/* Select dropdown styling */
+.form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.form-select option {
+  padding: 8px 12px;
+  color: #2d3748;
+}
+
+.form-select:focus {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23667eea' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
 }
 
 /* Login Button */
