@@ -1300,7 +1300,7 @@ body {
 }
 
 .btn-accept {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  background: linear-gradient(135deg, #058543 0%, #058543 100%);
   color: white;
 }
 
@@ -1402,7 +1402,7 @@ body {
 }
 
 .notification-success {
-  background: linear-gradient(135deg, #38a169 0%, #38a169 100%);
+  background: linear-gradient(135deg, #058543 0%, #058543 100%);
 }
 
 .notification-error {
