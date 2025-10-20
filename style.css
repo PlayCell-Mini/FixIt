@@ -2567,6 +2567,19 @@ body {
 .sidebar-link.danger:hover { background: #fed7d7; color: #c53030; }
 .sidebar-divider { height: 1px; background: #e2e8f0; margin: 0.5rem 0; }
 
+/* Icon-only sidebar links */
+.sidebar-link.icon-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem;
+}
+.sidebar-link.icon-only svg { color: currentColor; }
+
+/* Push logout to bottom */
+.sidebar-spacer { flex: 1 1 auto; }
+.sidebar-nav { min-height: 50vh; }
+
 /* Make main area fill remaining space when sidebar exists */
 .dashboard-body .dashboard-main { flex: 1; padding: 2rem; max-width: none; margin: 0; }
 
