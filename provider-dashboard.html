@@ -155,17 +155,18 @@
         // Mobile header: toggle sidebar
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
-        mobileMenuBtn.addEventListener('click', () => {
-          document.body.classList.add('sidebar-open');
-        });
-        sidebarOverlay.addEventListener('click', () => {
-          document.body.classList.remove('sidebar-open');
-        });
+        if (mobileMenuBtn) {
+          mobileMenuBtn.addEventListener('click', () => {
+            document.body.classList.add('sidebar-open');
+          });
+        }
+        if (sidebarOverlay) {
+          sidebarOverlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+          });
+        }
 
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-          this.logout();
-        });
+        // Logout - only sidebar logout exists now
         const logoutSidebar = document.getElementById('logoutBtnSidebar');
         if (logoutSidebar) {
           logoutSidebar.addEventListener('click', (e) => {
@@ -225,10 +226,12 @@
 
         // Mobile header profile button opens profile modal
         const mobileProfileBtn = document.getElementById('mobileProfileBtn');
-        mobileProfileBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.editProfile();
-        });
+        if (mobileProfileBtn) {
+          mobileProfileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.editProfile();
+          });
+        }
       }
 
       async checkAuthState() {
