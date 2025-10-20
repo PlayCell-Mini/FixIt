@@ -763,7 +763,7 @@ body {
 .form-input:focus-visible,
 .login-button:focus-visible,
 .signup-link:focus-visible {
-  outline: 2px solid #667eea;
+  outline: 2px solid #764ba2;
   outline-offset: 2px;
 }
 
@@ -2503,7 +2503,7 @@ body {
 .hamburger-btn:focus-visible,
 .mobile-nav-link:focus-visible,
 .dropdown-item:focus-visible {
-  outline: 2px solid #667eea;
+  outline: 2px solid #764ba2;
   outline-offset: 2px;
 }
 
