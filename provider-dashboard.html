@@ -569,6 +569,8 @@
         console.log('Modal before show:', modal.classList.toString());
         console.log('Overlay before show:', overlay.classList.toString());
         
+        // Force display block first, then add show class
+        modal.style.display = 'block';
         modal.classList.add('show');
         overlay.classList.add('show');
         
@@ -633,11 +635,7 @@
       }
     }
 
-    // Initialize dashboard
-    const dashboard = new ProviderDashboard();
-
-    // Edit Profile Modal Markup (injected at runtime to keep HTML minimal)
-    // Create modal immediately
+    // Create modal immediately before dashboard initialization
     (function ensureEditProfileModal() {
       if (document.getElementById('editProfileModal')) {
         console.log('Edit profile modal already exists');
@@ -813,6 +811,9 @@
         }
       });
     })();
+
+    // Initialize dashboard after modal is created
+    const dashboard = new ProviderDashboard();
   </script>
 </body>
 </html>
