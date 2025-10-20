@@ -2558,7 +2558,13 @@ body {
   text-align: center;
 }
 
-.sidebar-nav { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+.sidebar-nav { 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: space-between; 
+  height: calc(100vh - 80px); 
+  padding: 1rem 0;
+}
 .sidebar-link {
   display: block;
   text-decoration: none;
@@ -2587,9 +2593,9 @@ body {
 }
 .sidebar-link.icon-only svg { color: currentColor; }
 
-/* Push logout to bottom */
-.sidebar-spacer { flex: 1 1 auto; }
-.sidebar-nav { min-height: 50vh; }
+/* Sidebar sections */
+.sidebar-top { display: flex; flex-direction: column; gap: 0.5rem; }
+.sidebar-bottom { display: flex; flex-direction: column; gap: 0.5rem; }
 
 /* Make main area fill remaining space when sidebar exists */
 .dashboard-body .dashboard-main { 
@@ -2597,7 +2603,7 @@ body {
   padding: 2rem; 
   max-width: none; 
   margin: 0; 
-  margin-left: 192px; /* Account for fixed sidebar width */
+  margin-left: 96px; /* Account for fixed sidebar width */
 }
 
 /* ——— Responsive adjustments for sidebar ——— */
@@ -2612,14 +2618,14 @@ body {
 
 @media (min-width: 481px) and (max-width: 1023px) {
   .dashboard-body { flex-direction: column; max-width: 100%; }
-  .dashboard-sidebar { position: fixed; top: 0; left: 0; width: 192px; height: 100vh; }
-  .dashboard-body .dashboard-main { padding: 1.5rem; margin-left: 192px; }
+  .dashboard-sidebar { position: fixed; top: 0; left: 0; width: 96px; height: 100vh; }
+  .dashboard-body .dashboard-main { padding: 1.5rem; margin-left: 96px; }
 }
 
 @media (max-width: 480px) {
   .dashboard-body { flex-direction: column; max-width: 100%; }
-  .dashboard-sidebar { position: fixed; top: 0; left: 0; width: 192px; height: 100vh; }
-  .dashboard-body .dashboard-main { padding: 1rem; margin-left: 192px; }
+  .dashboard-sidebar { position: fixed; top: 0; left: 0; width: 96px; height: 100vh; }
+  .dashboard-body .dashboard-main { padding: 1rem; margin-left: 96px; }
 }
 
 /* Hide sidebar on mobile, show on tablet+ */
