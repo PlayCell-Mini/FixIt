@@ -562,6 +562,9 @@
           return;
         }
         
+        // Close mobile sidebar if open to avoid z-index/overlay conflicts
+        document.body.classList.remove('sidebar-open');
+
         console.log('Opening edit profile modal');
         console.log('Modal before show:', modal.classList.toString());
         console.log('Overlay before show:', overlay.classList.toString());
@@ -726,6 +729,13 @@
         overlay.classList.remove('show');
         modal.classList.remove('show');
       }
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      });
 
       overlay.addEventListener('click', closeModal);
       closeBtn.addEventListener('click', closeModal);
