@@ -1471,7 +1471,7 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: #764ba2;
   opacity: 0;
   visibility: hidden;
   transition: all 0.25s ease;
