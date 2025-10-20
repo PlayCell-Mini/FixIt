@@ -1178,13 +1178,13 @@ body {
 .request-status.accepted,
 .task-status.in-progress {
   background: #e6fffa;
-  color: #009548;
+  color: #058543;
 }
 
 .job-status.completed,
 .task-status.completed {
   background: #f0fff4;
-  color: #008f43;
+  color: #058543;
 }
 
 .request-status.rejected {
