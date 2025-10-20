@@ -198,8 +198,12 @@
         if (editSidebar) {
           editSidebar.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('Edit profile icon clicked');
             this.editProfile();
           });
+        } else {
+          console.error('sidebarEditProfile element not found');
         }
 
         // Stop propagation on avatar container; clicking avatar opens edit profile
@@ -207,8 +211,11 @@
         if (avatarContainer) {
           avatarContainer.addEventListener('click', (e) => {
             e.stopPropagation();
+            console.log('Avatar container clicked');
             this.editProfile();
           });
+        } else {
+          console.error('sidebarAvatarOwnerContainer element not found');
         }
 
         // Settings removed from sidebar
@@ -563,8 +570,20 @@
       }
 
       editProfile() {
+        console.log('editProfile method called');
         const modal = document.getElementById('editProfileModal');
         const overlay = document.getElementById('modalOverlay');
+        
+        if (!modal) {
+          console.error('editProfileModal not found');
+          return;
+        }
+        if (!overlay) {
+          console.error('modalOverlay not found');
+          return;
+        }
+        
+        console.log('Opening edit profile modal');
         modal.classList.add('show');
         overlay.classList.add('show');
       }
