@@ -167,14 +167,20 @@
         if (logoutSidebar) {
           logoutSidebar.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('Sidebar logout clicked');
             this.logout();
           });
           logoutSidebar.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
+              e.stopPropagation();
+              console.log('Sidebar logout keydown');
               this.logout();
             }
           });
+        } else {
+          console.error('logoutBtnSidebar element not found');
         }
 
         // Update sidebar avatar in real-time
