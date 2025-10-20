@@ -2604,6 +2604,7 @@ body {
   text-align: center;
 }
 .sidebar-avatar { display: flex; align-items: center; justify-content: center; }
+.sidebar-avatar { cursor: pointer; }
 .sidebar-avatar img { width: 64px; height: 64px; border-radius: 9999px; object-fit: cover; border: 3px solid #edf2f7; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 .sidebar-title { 
   font-weight: 700; 

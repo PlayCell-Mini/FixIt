@@ -35,7 +35,7 @@
     <div class="dashboard-body">
       <aside class="dashboard-sidebar">
         <div class="sidebar-header">
-          <div class="sidebar-avatar" id="sidebarAvatarProviderContainer">
+          <div class="sidebar-avatar" id="sidebarAvatarProviderContainer" role="button" tabindex="0" aria-label="Edit profile">
             <img id="sidebarAvatarProvider" src="https://via.placeholder.com/64x64/667eea/ffffff?text=P" alt="Avatar" />
           </div>
         </div>
@@ -213,11 +213,28 @@
         // Stop propagation on avatar container; clicking avatar opens edit profile
         const avatarContainer = document.getElementById('sidebarAvatarProviderContainer');
         if (avatarContainer) {
+          const avatarImg = document.getElementById('sidebarAvatarProvider');
           avatarContainer.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             console.log('Avatar container clicked');
             this.editProfile();
           });
+          avatarContainer.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              this.editProfile();
+            }
+          });
+          if (avatarImg) {
+            avatarImg.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Avatar image clicked');
+              this.editProfile();
+            });
+          }
         } else {
           console.error('sidebarAvatarProviderContainer element not found');
         }
