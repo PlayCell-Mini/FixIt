@@ -1178,13 +1178,13 @@ body {
 .request-status.accepted,
 .task-status.in-progress {
   background: #e6fffa;
-  color: #38b2ac;
+  color: #009548;
 }
 
 .job-status.completed,
 .task-status.completed {
   background: #f0fff4;
-  color: #38a169;
+  color: #008f43;
 }
 
 .request-status.rejected {
@@ -1533,7 +1533,7 @@ body {
   transition: all 0.2s ease;
 }
 .field input:focus, .field select:focus {
-  border-color: #4BA287;
+  border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
   outline: none;
 }
