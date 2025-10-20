@@ -35,7 +35,7 @@
     <div class="dashboard-body">
       <aside class="dashboard-sidebar">
         <div class="sidebar-header">
-          <div class="sidebar-avatar">
+          <div class="sidebar-avatar" id="sidebarAvatarOwnerContainer">
             <img id="sidebarAvatarOwner" src="https://via.placeholder.com/64x64/667eea/ffffff?text=O" alt="Avatar" />
           </div>
         </div>
@@ -50,7 +50,7 @@
                 <circle cx="12" cy="7" r="4"/>
               </svg>
             </a>
-            <a href="#" id="logoutBtnSidebar" class="sidebar-link icon-only danger" title="Logout" aria-label="Logout">
+            <a href="#" id="logoutBtnSidebar" class="sidebar-link icon-only danger" title="Logout" aria-label="Logout" role="button" tabindex="0">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16,17 21,12 16,7"/>
@@ -169,6 +169,12 @@
             e.preventDefault();
             this.logout();
           });
+          logoutSidebar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              this.logout();
+            }
+          });
         }
 
         // Update sidebar avatar in real-time
@@ -186,6 +192,15 @@
         if (editSidebar) {
           editSidebar.addEventListener('click', (e) => {
             e.preventDefault();
+            this.editProfile();
+          });
+        }
+
+        // Stop propagation on avatar container; clicking avatar opens edit profile
+        const avatarContainer = document.getElementById('sidebarAvatarOwnerContainer');
+        if (avatarContainer) {
+          avatarContainer.addEventListener('click', (e) => {
+            e.stopPropagation();
             this.editProfile();
           });
         }
