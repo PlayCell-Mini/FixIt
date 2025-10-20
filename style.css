@@ -2525,3 +2525,69 @@ body {
     border-color: currentColor;
   }
 }
+
+/* ================= Sidebar Layout (Dashboards) ================ */
+.dashboard-body {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 76px;
+  align-self: flex-start;
+  width: 240px;
+  min-height: calc(100vh - 76px);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  border-radius: 16px;
+  margin: 1.5rem 1rem 1.5rem 1.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.sidebar-header { padding: 0.25rem 0.5rem 0.75rem 0.5rem; }
+.sidebar-title { font-weight: 700; color: #2d3748; letter-spacing: 0.3px; }
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
+.sidebar-link {
+  display: block;
+  text-decoration: none;
+  color: #4a5568;
+  padding: 0.625rem 0.75rem;
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.sidebar-link:hover { background: #edf2f7; color: #2d3748; }
+.sidebar-link.active { background: linear-gradient(135deg, #764ba2 0%, #764ba2 100%); color: #fff; box-shadow: 0 4px 12px rgba(102,126,234,0.35); }
+.sidebar-link.danger { color: #e53e3e; }
+.sidebar-link.danger:hover { background: #fed7d7; color: #c53030; }
+.sidebar-divider { height: 1px; background: #e2e8f0; margin: 0.5rem 0; }
+
+/* Make main area fill remaining space when sidebar exists */
+.dashboard-body .dashboard-main { flex: 1; padding: 2rem; max-width: none; margin: 0; }
+
+/* ——— Responsive adjustments for sidebar ——— */
+@media (min-width: 1280px) {
+  .dashboard-body { max-width: 1400px; }
+  .dashboard-body .dashboard-main { padding: 3rem; }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .dashboard-body .dashboard-main { padding: 2.5rem; }
+}
+
+@media (min-width: 481px) and (max-width: 1023px) {
+  .dashboard-body { flex-direction: column; max-width: 100%; }
+  .dashboard-sidebar { position: relative; top: auto; width: auto; min-height: auto; margin: 1rem; }
+  .dashboard-body .dashboard-main { padding: 1.5rem; }
+}
+
+@media (max-width: 480px) {
+  .dashboard-body { flex-direction: column; max-width: 100%; }
+  .dashboard-sidebar { position: relative; top: auto; width: auto; min-height: auto; margin: 0.75rem; }
+  .dashboard-body .dashboard-main { padding: 1rem; }
+}

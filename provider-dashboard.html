@@ -65,7 +65,21 @@
     </header>
 
     <!-- Main Dashboard Content -->
-    <main class="dashboard-main">
+    <div class="dashboard-body">
+      <aside class="dashboard-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">Provider</div>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#" class="sidebar-link active" data-tab="hire-requests">Hire Requests</a>
+          <a href="#" class="sidebar-link" data-tab="completed-jobs">Completed Jobs</a>
+          <div class="sidebar-divider"></div>
+          <a href="index.html" class="sidebar-link">Home</a>
+          <a href="#" id="logoutBtnSidebar" class="sidebar-link danger">Logout</a>
+        </nav>
+      </aside>
+
+      <main class="dashboard-main">
       <!-- Tab Navigation -->
       <div class="tab-navigation">
         <button class="tab-btn active" data-tab="hire-requests">
@@ -114,7 +128,8 @@
           </div>
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -173,6 +188,28 @@
         document.getElementById('logoutBtn').addEventListener('click', () => {
           this.logout();
         });
+        const logoutSidebar = document.getElementById('logoutBtnSidebar');
+        if (logoutSidebar) {
+          logoutSidebar.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.logout();
+          });
+        }
+
+        // Sidebar tab links
+        document.querySelectorAll('.dashboard-sidebar .sidebar-link[data-tab]')
+          .forEach(link => {
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              const tab = e.currentTarget.getAttribute('data-tab');
+              if (tab) {
+                this.switchTab(tab);
+                document.querySelectorAll('.dashboard-sidebar .sidebar-link')
+                  .forEach(l => l.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+              }
+            });
+          });
 
         // Edit Profile
         document.getElementById('editProfileBtn').addEventListener('click', (e) => {
