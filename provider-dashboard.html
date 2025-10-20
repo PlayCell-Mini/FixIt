@@ -529,7 +529,12 @@
 
       logout() {
         auth.signOut().then(() => {
-          window.location.href = "login.html";
+          this.showNotification('Logged out successfully', 'success');
+          setTimeout(() => {
+            window.location.href = "login.html";
+          }, 400);
+        }).catch((err) => {
+          this.showNotification(err?.message || 'Logout failed', 'error');
         });
       }
 
