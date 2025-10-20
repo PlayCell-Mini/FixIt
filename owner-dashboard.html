@@ -35,7 +35,9 @@
     <div class="dashboard-body">
       <aside class="dashboard-sidebar">
         <div class="sidebar-header">
-          <div class="sidebar-title">Owner</div>
+          <div class="sidebar-avatar">
+            <img id="sidebarAvatarOwner" src="https://via.placeholder.com/64x64/667eea/ffffff?text=O" alt="Avatar" />
+          </div>
         </div>
         <nav class="sidebar-nav">
           <div class="sidebar-top">
@@ -168,6 +170,16 @@
             this.logout();
           });
         }
+
+        // Update sidebar avatar in real-time
+        auth.onAuthStateChanged(async (user) => {
+          if (!user) return;
+          db.collection('users').doc(user.uid).onSnapshot((doc) => {
+            const data = doc.exists ? doc.data() : {};
+            const img = document.getElementById('sidebarAvatarOwner');
+            if (img && data.profileImage) img.src = data.profileImage;
+          });
+        });
 
         // Sidebar: Edit Profile (icon)
         const editSidebar = document.getElementById('sidebarEditProfile');
@@ -596,20 +608,14 @@
                 <small class=\"hint\">PNG/JPG up to ~2MB</small>
               </div>
               <div class=\"profile-fields\">
-                <label class=\"field\">
+                <label class="field">
                   <span>Full Name</span>
-                  <input type=\"text\" id=\"editName\" placeholder=\"Your name\" />
+                  <input type="text" id="editName" placeholder="Your name" />
                 </label>
-                <div class=\"field-row\">
-                  <label class=\"field\">
-                    <span>Hourly Rate ($)</span>
-                    <input type=\"number\" id=\"editHourly\" min=\"0\" step=\"1\" placeholder=\"e.g. 25\" />
-                  </label>
-                  <label class=\"field\">
-                    <span>Daily Rate ($)</span>
-                    <input type=\"number\" id=\"editDaily\" min=\"0\" step=\"1\" placeholder=\"e.g. 150\" />
-                  </label>
-                </div>
+                <label class="field">
+                  <span>Address</span>
+                  <input type="text" id="editAddress" placeholder="Your address" />
+                </label>
               </div>
             </div>
           </div>
@@ -644,8 +650,7 @@
         const userDoc = await db.collection('users').doc(user.uid).get();
         const data = userDoc.exists ? userDoc.data() : {};
         document.getElementById('editName').value = data.fullName || '';
-        document.getElementById('editHourly').value = data.hourlyRate || '';
-        document.getElementById('editDaily').value = data.dailyRate || '';
+        document.getElementById('editAddress').value = data.address || '';
         if (data.profileImage) previewImg.src = data.profileImage;
       });
 
@@ -668,13 +673,11 @@
         if (!user) return;
 
         const fullName = (document.getElementById('editName').value || '').trim();
-        const hourlyRate = Number(document.getElementById('editHourly').value || 0);
-        const dailyRate = Number(document.getElementById('editDaily').value || 0);
+        const address = (document.getElementById('editAddress').value || '').trim();
 
         const updateData = {
           fullName,
-          hourlyRate,
-          dailyRate,
+          address,
           updatedAt: new Date()
         };
 

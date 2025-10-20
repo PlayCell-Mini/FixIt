@@ -35,7 +35,9 @@
     <div class="dashboard-body">
       <aside class="dashboard-sidebar">
         <div class="sidebar-header">
-          <div class="sidebar-title">Provider</div>
+          <div class="sidebar-avatar">
+            <img id="sidebarAvatarProvider" src="https://via.placeholder.com/64x64/667eea/ffffff?text=P" alt="Avatar" />
+          </div>
         </div>
         <nav class="sidebar-nav">
           <div class="sidebar-top">
@@ -171,6 +173,16 @@
             this.logout();
           });
         }
+
+        // Update sidebar avatar in real-time
+        auth.onAuthStateChanged(async (user) => {
+          if (!user) return;
+          db.collection('providers').doc(user.uid).onSnapshot((doc) => {
+            const data = doc.exists ? doc.data() : {};
+            const img = document.getElementById('sidebarAvatarProvider');
+            if (img && data.profileImage) img.src = data.profileImage;
+          });
+        });
 
         // Sidebar: Edit Profile (icon)
         const editSidebar = document.getElementById('sidebarEditProfile');
@@ -565,6 +577,16 @@
                   <input type="text" id="editName" placeholder="Your name" />
                 </label>
                 <label class="field">
+                  <span>Service Type</span>
+                  <select id="editServiceType">
+                    <option value="painter">Painter</option>
+                    <option value="plumber">Plumber</option>
+                    <option value="welder">Welder</option>
+                    <option value="electrician">Electrician</option>
+                    <option value="carpenter">Carpenter</option>
+                  </select>
+                </label>
+                <label class="field">
                   <span>Experience (years)</span>
                   <select id="editExperience">
                     <option value="1">1</option>
@@ -579,8 +601,8 @@
                     <input type="number" id="editHourly" min="0" step="1" placeholder="e.g. 25" />
                   </label>
                   <label class="field">
-                    <span>Daily Rate ($)</span>
-                    <input type="number" id="editDaily" min="0" step="1" placeholder="e.g. 150" />
+                    <span>Address</span>
+                    <input type="text" id="editAddress" placeholder="Your address" />
                   </label>
                 </div>
               </div>
@@ -617,9 +639,10 @@
         const profileDoc = await db.collection('providers').doc(user.uid).get();
         const data = profileDoc.exists ? profileDoc.data() : {};
         document.getElementById('editName').value = data.name || '';
+        document.getElementById('editServiceType').value = (data.serviceType || 'painter');
         document.getElementById('editExperience').value = (data.experience || '5').toString().replace('+','');
         document.getElementById('editHourly').value = data.hourlyRate || '';
-        document.getElementById('editDaily').value = data.dailyRate || '';
+        document.getElementById('editAddress').value = data.address || '';
         if (data.profileImage) previewImg.src = data.profileImage;
       });
 
@@ -642,15 +665,17 @@
         if (!user) return;
 
         const name = (document.getElementById('editName').value || '').trim();
+        const serviceType = document.getElementById('editServiceType').value;
         const experience = document.getElementById('editExperience').value;
         const hourlyRate = Number(document.getElementById('editHourly').value || 0);
-        const dailyRate = Number(document.getElementById('editDaily').value || 0);
+        const address = (document.getElementById('editAddress').value || '').trim();
 
         const updateData = {
           name,
+          serviceType,
           experience,
           hourlyRate,
-          dailyRate,
+          address,
           updatedAt: new Date()
         };
 
