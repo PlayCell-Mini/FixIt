@@ -546,8 +546,25 @@
         }
         
         console.log('Opening edit profile modal');
+        console.log('Modal before show:', modal.classList.toString());
+        console.log('Overlay before show:', overlay.classList.toString());
+        
         modal.classList.add('show');
         overlay.classList.add('show');
+        
+        console.log('Modal after show:', modal.classList.toString());
+        console.log('Overlay after show:', overlay.classList.toString());
+        
+        // Force a reflow to ensure the changes are applied
+        modal.offsetHeight;
+        
+        // Check if modal is actually visible
+        setTimeout(() => {
+          const computedStyle = window.getComputedStyle(modal);
+          console.log('Modal computed display:', computedStyle.display);
+          console.log('Modal computed visibility:', computedStyle.visibility);
+          console.log('Modal computed opacity:', computedStyle.opacity);
+        }, 100);
       }
 
       setPricing() {
@@ -600,8 +617,13 @@
     const dashboard = new ProviderDashboard();
 
     // Edit Profile Modal Markup (injected at runtime to keep HTML minimal)
+    // Create modal immediately
     (function ensureEditProfileModal() {
-      if (document.getElementById('editProfileModal')) return;
+      if (document.getElementById('editProfileModal')) {
+        console.log('Edit profile modal already exists');
+        return;
+      }
+      console.log('Creating edit profile modal');
       const wrapper = document.createElement('div');
       wrapper.innerHTML = `
         <div class="modal-overlay" id="modalOverlay"></div>
@@ -663,6 +685,7 @@
         </div>
       `;
       document.body.appendChild(wrapper);
+      console.log('Edit profile modal created and appended to body');
 
       const overlay = document.getElementById('modalOverlay');
       const modal = document.getElementById('editProfileModal');
@@ -671,6 +694,16 @@
       const avatarInput = document.getElementById('avatarInput');
       const previewImg = document.getElementById('editAvatarPreview');
       const saveBtn = document.getElementById('saveProfileBtn');
+
+      console.log('Modal elements found:', {
+        overlay: !!overlay,
+        modal: !!modal,
+        closeBtn: !!closeBtn,
+        cancelBtn: !!cancelBtn,
+        avatarInput: !!avatarInput,
+        previewImg: !!previewImg,
+        saveBtn: !!saveBtn
+      });
 
       function closeModal() {
         overlay.classList.remove('show');
