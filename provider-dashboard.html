@@ -277,8 +277,14 @@
             const data = profile.data();
             document.getElementById('providerName').textContent = data.name || 'Provider';
             document.getElementById('experienceLevel').textContent = `${data.experience || '5'}+ Years`;
+            
+            // Load profile image in both header and sidebar
             if (data.profileImage) {
-              document.getElementById('profileImage').src = data.profileImage;
+              const headerImg = document.getElementById('profileImage');
+              if (headerImg) headerImg.src = data.profileImage;
+              
+              const sidebarImg = document.getElementById('sidebarAvatarProvider');
+              if (sidebarImg) sidebarImg.src = data.profileImage;
             }
           }
         } catch (error) {

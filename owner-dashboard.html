@@ -256,8 +256,14 @@
           if (profile.exists) {
             const data = profile.data();
             document.getElementById('ownerName').textContent = data.fullName || 'Service Owner';
+            
+            // Load profile image in both header and sidebar
             if (data.profileImage) {
-              document.getElementById('profileImage').src = data.profileImage;
+              const headerImg = document.getElementById('profileImage');
+              if (headerImg) headerImg.src = data.profileImage;
+              
+              const sidebarImg = document.getElementById('sidebarAvatarOwner');
+              if (sidebarImg) sidebarImg.src = data.profileImage;
             }
           }
         } catch (error) {
