@@ -68,6 +68,9 @@ app.use('/api', marketplaceRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api/auth', authRoutes);
 
+// Add direct auth routes for frontend compatibility
+app.use('/api', authRoutes); // This makes /api/login and /api/signup work directly
+
 // Serve index.html on root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -84,6 +87,43 @@ app.get('/health', (req, res) => {
       cognito: 'connected'
     }
   });
+});
+
+// 404 handler for API routes - return JSON instead of HTML
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Not Found',
+    message: `API endpoint ${req.originalUrl} not found`,
+    availableEndpoints: [
+      '/api/auth/signup',
+      '/api/auth/login',
+      '/api/auth/refresh',
+      '/api/auth/verify',
+      '/api/hire',
+      '/api/services',
+      '/api/upload',
+      '/health'
+    ]
+  });
+});
+
+// Global error handler - ensure all errors return JSON for API routes
+app.use((err, req, res, next) => {
+  console.error('❌ Server Error:', err);
+  
+  // For API routes, always return JSON
+  if (req.path.startsWith('/api')) {
+    return res.status(err.status || 500).json({
+      success: false,
+      error: err.name || 'ServerError',
+      message: err.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+  
+  // For non-API routes, you can serve error pages
+  res.status(err.status || 500).send('Server Error');
 });
 
 // Start server
