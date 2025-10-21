@@ -566,27 +566,11 @@
         document.body.classList.remove('sidebar-open');
 
         console.log('Opening edit profile modal');
-        console.log('Modal before show:', modal.classList.toString());
-        console.log('Overlay before show:', overlay.classList.toString());
         
-        // Force display block first, then add show class
+        // Show modal and overlay
         modal.style.display = 'block';
-        modal.classList.add('show');
         overlay.classList.add('show');
-        
-        console.log('Modal after show:', modal.classList.toString());
-        console.log('Overlay after show:', overlay.classList.toString());
-        
-        // Force a reflow to ensure the changes are applied
-        modal.offsetHeight;
-        
-        // Check if modal is actually visible
-        setTimeout(() => {
-          const computedStyle = window.getComputedStyle(modal);
-          console.log('Modal computed display:', computedStyle.display);
-          console.log('Modal computed visibility:', computedStyle.visibility);
-          console.log('Modal computed opacity:', computedStyle.opacity);
-        }, 100);
+        modal.classList.add('show');
       }
 
       setPricing() {
@@ -724,8 +708,14 @@
       });
 
       function closeModal() {
+        console.log('Closing modal');
         overlay.classList.remove('show');
         modal.classList.remove('show');
+        
+        // Wait for CSS transition to complete before hiding
+        setTimeout(() => {
+          modal.style.display = 'none';
+        }, 250);
       }
 
       // Close on Escape key

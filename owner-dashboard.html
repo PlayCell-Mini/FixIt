@@ -587,8 +587,9 @@
         }
         
         console.log('Opening edit profile modal');
-        modal.classList.add('show');
+        modal.style.display = 'block';
         overlay.classList.add('show');
+        modal.classList.add('show');
       }
 
       logout() {
@@ -684,9 +685,22 @@
       const saveBtn = document.getElementById('saveProfileBtn');
 
       function closeModal() {
+        console.log('Closing modal');
         overlay.classList.remove('show');
         modal.classList.remove('show');
+        
+        // Wait for CSS transition to complete before hiding
+        setTimeout(() => {
+          modal.style.display = 'none';
+        }, 250);
       }
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      });
 
       overlay.addEventListener('click', closeModal);
       closeBtn.addEventListener('click', closeModal);
