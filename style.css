@@ -1595,6 +1595,42 @@ body {
   cursor: pointer;
 }
 
+.camera-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102,126,234,0.2);
+}
+
+.camera-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102,126,234,0.35);
+}
+
+.camera-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102,126,234,0.25);
+}
+
+.camera-btn svg {
+  flex-shrink: 0;
+}
+
+.camera-btn span {
+  white-space: nowrap;
+}
+
 .hint { 
   color: #a0aec0; 
   font-size: 0.875rem;
