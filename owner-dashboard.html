@@ -817,22 +817,37 @@
               throw new Error('Only PNG and JPG images are allowed');
             }
 
+            console.log('Uploading image to Firebase Storage...');
+            
+            // STEP 1: Upload image file to Firebase Storage
             const storageRef = firebase.storage().ref();
             const fileRef = storageRef.child(`profileImages/${user.uid}`);
             await fileRef.put(file);
+            
+            console.log('Image uploaded successfully. Getting download URL...');
+            
+            // STEP 2: Get the download URL from Firebase Storage
             const url = await fileRef.getDownloadURL();
+            console.log('Download URL obtained:', url);
+            
+            // STEP 3: Add URL to updateData object (will be saved to Firestore)
             updateData.profileImage = url;
             
-            // Update header image
+            // STEP 4: Update UI immediately with the new URL
             const headerImg = document.getElementById('profileImage');
             if (headerImg) headerImg.src = url;
             
-            // Update sidebar avatar
             const sidebarImg = document.getElementById('sidebarAvatarOwner');
             if (sidebarImg) sidebarImg.src = url;
           }
 
+          console.log('Saving profile data to Firestore...');
+          
+          // STEP 5: Save all data (including profileImage URL) to Firestore database
           await db.collection('users').doc(user.uid).set(updateData, { merge: true });
+          
+          console.log('Profile data saved to Firestore successfully!');
+          console.log('Saved data:', updateData);
           
           // Update UI elements
           if (fullName) {
