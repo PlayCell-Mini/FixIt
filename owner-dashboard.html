@@ -113,17 +113,23 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+  <!-- AWS SDK v2 for Browser -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
+  <script src="awsConfig.js"></script>
 
-  <script src="firebase-config.js"></script>
   <script>
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // Initialize AWS Service
+    // IMPORTANT: In production, use Cognito Identity Pool or backend API
+    // Never hardcode credentials in frontend code!
+    const AWS_ACCESS_KEY = ''; // Set from secure source
+    const AWS_SECRET_KEY = ''; // Set from secure source
+    
+    // Initialize AWS (credentials should come from environment or secure config)
+    if (AWS_ACCESS_KEY && AWS_SECRET_KEY) {
+      awsService.initialize(AWS_ACCESS_KEY, AWS_SECRET_KEY);
+    }
+
+    const aws = awsService;
 
     // Dashboard State Management
     class OwnerDashboard {
@@ -185,17 +191,26 @@
         }
 
         // Real-time listener for profile picture updates
-        auth.onAuthStateChanged(async (user) => {
-          if (!user) return;
-          db.collection('users').doc(user.uid).onSnapshot((doc) => {
-            const data = doc.exists ? doc.data() : {};
-            const img = document.getElementById('sidebarAvatarOwner');
-            if (img && data.profileURL) {
-              img.src = data.profileURL;
-              console.log('Real-time update: Profile picture changed to', data.profileURL);
+        // Note: DynamoDB doesn't have real-time listeners like Firestore
+        // We'll poll or use WebSocket/AppSync for real-time updates
+        const currentUser = aws.getCurrentUser();
+        if (currentUser) {
+          // Poll for updates every 30 seconds (or use AWS AppSync for real-time)
+          setInterval(async () => {
+            try {
+              const userData = await aws.getUserProfile(currentUser.userId, 'user');
+              if (userData && userData.profileURL) {
+                const img = document.getElementById('sidebarAvatarOwner');
+                if (img && img.src !== userData.profileURL) {
+                  img.src = userData.profileURL;
+                  console.log('Profile picture updated:', userData.profileURL);
+                }
+              }
+            } catch (error) {
+              console.error('Error polling profile updates:', error);
             }
-          });
-        });
+          }, 30000);
+        }
 
         // Sidebar: Edit Profile (icon)
         const editSidebar = document.getElementById('sidebarEditProfile');
@@ -235,38 +250,46 @@
       }
 
       async checkAuthState() {
-        auth.onAuthStateChanged(async (user) => {
-          if (!user) {
-            window.location.href = "login.html";
-            return;
-          }
+        // Check AWS Cognito authentication
+        const currentUser = aws.getCurrentUser();
+        
+        if (!currentUser) {
+          window.location.href = "login.html";
+          return;
+        }
+        
+        try {
+          // Get user data from DynamoDB
+          const userData = await aws.getUserProfile(currentUser.userId, 'user');
           
-          const docRef = await db.collection('users').doc(user.uid).get();
-          if (!docRef.exists || docRef.data().role !== 'seeker') {
+          if (!userData || userData.role !== 'seeker') {
             alert('Access denied!');
-            auth.signOut();
+            aws.signOut();
             window.location.href = "login.html";
             return;
           }
           
-          this.loadUserProfile(user);
-        });
+          this.loadUserProfile(currentUser);
+        } catch (error) {
+          console.error('Error checking auth state:', error);
+          window.location.href = "login.html";
+        }
       }
 
       async loadUserProfile(user) {
         try {
-          // STEP 4: Fetch profileURL from Firestore on page load
-          const profile = await db.collection('users').doc(user.uid).get();
-          if (profile.exists) {
-            const data = profile.data();
-            console.log('Loading user profile:', data);
+          // STEP 4: Fetch profileURL from DynamoDB on page load
+          const profile = await aws.getUserProfile(user.userId, 'user');
+          
+          if (profile) {
+            console.log('Loading user profile:', profile);
             
-            // Display profile picture from Firestore if exists
-            if (data.profileURL) {
+            // Display profile picture from DynamoDB if exists
+            if (profile.profileURL) {
               const sidebarImg = document.getElementById('sidebarAvatarOwner');
               if (sidebarImg) {
-                sidebarImg.src = data.profileURL;
-                console.log('Profile picture loaded from database:', data.profileURL);
+                sidebarImg.src = profile.profileURL;
+                console.log('Profile picture loaded from DynamoDB:', profile.profileURL);
               }
             }
           }
@@ -282,24 +305,34 @@
 
       async loadOngoingTasks() {
         try {
-          const user = auth.currentUser;
-          if (!user) return;
+          const currentUser = aws.getCurrentUser();
+          if (!currentUser) return;
 
-          const tasksSnapshot = await db.collection('jobs')
-            .where('ownerId', '==', user.uid)
-            .where('status', 'in', ['accepted', 'in-progress'])
-            .orderBy('createdAt', 'desc')
-            .get();
+          // Query jobs from DynamoDB using GSI (Global Secondary Index)
+          const jobs = await aws.queryItems('FixIt-Jobs', {
+            IndexName: 'ownerIndex',
+            KeyConditionExpression: 'ownerId = :ownerId',
+            FilterExpression: '#status IN (:accepted, :inProgress)',
+            ExpressionAttributeNames: {
+              '#status': 'status'
+            },
+            ExpressionAttributeValues: {
+              ':ownerId': currentUser.userId,
+              ':accepted': 'accepted',
+              ':inProgress': 'in-progress'
+            }
+          });
 
           this.ongoingTasks = [];
-          for (const doc of tasksSnapshot.docs) {
-            const taskData = { id: doc.id, ...doc.data() };
+          
+          for (const job of jobs) {
+            const taskData = { id: job.jobId, ...job };
             
-            // Get provider details
-            if (taskData.providerId) {
-              const providerDoc = await db.collection('providers').doc(taskData.providerId).get();
-              if (providerDoc.exists) {
-                taskData.provider = providerDoc.data();
+            // Get provider details from DynamoDB
+            if (job.providerId) {
+              const providerData = await aws.getUserProfile(job.providerId, 'provider');
+              if (providerData) {
+                taskData.provider = providerData;
               }
             }
             
@@ -315,24 +348,33 @@
 
       async loadHistory() {
         try {
-          const user = auth.currentUser;
-          if (!user) return;
+          const currentUser = aws.getCurrentUser();
+          if (!currentUser) return;
 
-          const historySnapshot = await db.collection('jobs')
-            .where('ownerId', '==', user.uid)
-            .where('status', '==', 'completed')
-            .orderBy('completedAt', 'desc')
-            .get();
+          // Query completed jobs from DynamoDB
+          const jobs = await aws.queryItems('FixIt-Jobs', {
+            IndexName: 'ownerIndex',
+            KeyConditionExpression: 'ownerId = :ownerId',
+            FilterExpression: '#status = :completed',
+            ExpressionAttributeNames: {
+              '#status': 'status'
+            },
+            ExpressionAttributeValues: {
+              ':ownerId': currentUser.userId,
+              ':completed': 'completed'
+            }
+          });
 
           this.history = [];
-          for (const doc of historySnapshot.docs) {
-            const historyData = { id: doc.id, ...doc.data() };
+          
+          for (const job of jobs) {
+            const historyData = { id: job.jobId, ...job };
             
-            // Get provider details
-            if (historyData.providerId) {
-              const providerDoc = await db.collection('providers').doc(historyData.providerId).get();
-              if (providerDoc.exists) {
-                historyData.provider = providerDoc.data();
+            // Get provider details from DynamoDB
+            if (job.providerId) {
+              const providerData = await aws.getUserProfile(job.providerId, 'provider');
+              if (providerData) {
+                historyData.provider = providerData;
               }
             }
             
@@ -603,14 +645,11 @@
       }
 
       logout() {
-        auth.signOut().then(() => {
-          this.showNotification('Logged out successfully', 'success');
-          setTimeout(() => {
-            window.location.href = "login.html";
-          }, 400);
-        }).catch((err) => {
-          this.showNotification(err?.message || 'Logout failed', 'error');
-        });
+        aws.signOut();
+        this.showNotification('Logged out successfully', 'success');
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 400);
       }
 
       showNotification(message, type = 'info') {
@@ -730,23 +769,29 @@
       cancelBtn.addEventListener('click', closeModal);
 
       // Prefill form when modal is opened
-      auth.onAuthStateChanged(async (user) => {
-        if (!user) return;
+      const initializeProfileForm = async () => {
+        const currentUser = aws.getCurrentUser();
+        if (!currentUser) return;
+        
         try {
-          const userDoc = await db.collection('users').doc(user.uid).get();
-          const data = userDoc.exists ? userDoc.data() : {};
+          const userData = await aws.getUserProfile(currentUser.userId, 'user');
           
-          document.getElementById('editName').value = data.fullName || '';
-          document.getElementById('editAddress').value = data.address || '';
-          
-          // Load existing profile picture to modal preview
-          if (data.profileURL) {
-            previewImg.src = data.profileURL;
+          if (userData) {
+            document.getElementById('editName').value = userData.fullName || '';
+            document.getElementById('editAddress').value = userData.address || '';
+            
+            // Load existing profile picture to modal preview
+            if (userData.profileURL) {
+              previewImg.src = userData.profileURL;
+            }
           }
         } catch (error) {
           console.error('Error prefilling form:', error);
         }
-      });
+      };
+      
+      // Initialize form when modal opens
+      setTimeout(initializeProfileForm, 500);
 
       // Preview selection and update immediately
       avatarInput.addEventListener('change', () => {
@@ -776,10 +821,10 @@
         reader.readAsDataURL(file);
       });
 
-      // STEP 2 & 3: Save profile with image upload
+      // STEP 2 & 3: Save profile with image upload to AWS S3 and DynamoDB
       saveBtn.addEventListener('click', async () => {
-        const user = auth.currentUser;
-        if (!user) {
+        const currentUser = aws.getCurrentUser();
+        if (!currentUser) {
           dashboard.showNotification('You must be logged in to update your profile', 'error');
           return;
         }
@@ -806,8 +851,7 @@
 
         const updateData = {
           fullName,
-          address,
-          updatedAt: new Date()
+          address
         };
 
         try {
@@ -824,29 +868,23 @@
               throw new Error('Only PNG and JPG images are allowed');
             }
 
-            console.log('STEP 2: Uploading image to Firebase Storage...');
+            console.log('STEP 2: Uploading image to AWS S3...');
             
-            // Upload file to Firebase Storage at profilePhotos/{uid}/profile.jpg
-            const storageRef = firebase.storage().ref();
-            const fileRef = storageRef.child(`profilePhotos/${user.uid}/profile.jpg`);
-            await fileRef.put(file);
+            // Upload file to AWS S3 at profilePhotos/{userId}/profile.jpg
+            const imageURL = await aws.uploadProfilePicture(file, currentUser.userId);
             
-            console.log('Image uploaded successfully. Getting download URL...');
+            console.log('Image uploaded successfully. URL:', imageURL);
             
-            // Get the download URL using getDownloadURL()
-            const downloadURL = await fileRef.getDownloadURL();
-            console.log('Download URL obtained:', downloadURL);
-            
-            // STEP 1: Add profileURL to updateData (will be saved to Firestore)
-            updateData.profileURL = downloadURL;
+            // STEP 1: Add profileURL to updateData (will be saved to DynamoDB)
+            updateData.profileURL = imageURL;
           }
 
-          console.log('STEP 2: Saving to Firestore users collection...');
+          console.log('STEP 2: Saving to AWS DynamoDB users table...');
           
-          // Save data to Firestore using set with merge (creates document if doesn't exist)
-          await db.collection('users').doc(user.uid).set(updateData, { merge: true });
+          // Save data to DynamoDB
+          await aws.updateUserProfile(currentUser.userId, updateData, 'user');
           
-          console.log('✅ Profile data saved to Firestore successfully!');
+          console.log('✅ Profile data saved to DynamoDB successfully!');
           console.log('Saved data:', updateData);
           
           // STEP 3: UI update after save

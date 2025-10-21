@@ -53,16 +53,20 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <!-- AWS SDK for Browser -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
+  <script src="awsConfig.js"></script>
 
-  <script src="firebase-config.js"></script>
   <script>
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // Initialize AWS Service
+    const AWS_ACCESS_KEY = ''; // Set from secure source
+    const AWS_SECRET_KEY = ''; // Set from secure source
+    
+    if (AWS_ACCESS_KEY && AWS_SECRET_KEY) {
+      awsService.initialize(AWS_ACCESS_KEY, AWS_SECRET_KEY);
+    }
+
+    const aws = awsService;
 
     // Get DOM elements
     const loginForm = document.getElementById('loginForm');
@@ -166,12 +170,15 @@
       setLoadingState(true);
 
       try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        const user = userCredential.user;
+        // Sign in with AWS Cognito
+        await aws.signIn(email, password);
 
-        // Get user role from Firestore
-        const docRef = await db.collection('users').doc(user.uid).get();
-        const role = docRef.exists ? docRef.data().role : 'unknown';
+        // Get current user from token
+        const currentUser = aws.getCurrentUser();
+        
+        // Get user role from DynamoDB
+        const userData = await aws.getUserProfile(currentUser.userId, 'user');
+        const role = userData ? userData.role : 'unknown';
 
         // Show success message briefly
         loginButton.textContent = 'Welcome!';
@@ -191,27 +198,32 @@
         // Handle specific error messages
         let errorMessage = 'An error occurred. Please try again.';
         
-        switch (error.code) {
-          case 'auth/user-not-found':
-            errorMessage = 'No account found with this email address.';
-            break;
-          case 'auth/wrong-password':
-            errorMessage = 'Incorrect password. Please try again.';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'Please enter a valid email address.';
-            break;
-          case 'auth/user-disabled':
-            errorMessage = 'This account has been disabled.';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = 'Too many failed attempts. Please try again later.';
-            break;
-          case 'auth/network-request-failed':
-            errorMessage = 'Network error. Please check your connection.';
-            break;
-          default:
-            errorMessage = error.message || errorMessage;
+        // AWS Cognito error codes
+        if (error.code) {
+          switch (error.code) {
+            case 'UserNotFoundException':
+              errorMessage = 'No account found with this email address.';
+              break;
+            case 'NotAuthorizedException':
+              errorMessage = 'Incorrect password. Please try again.';
+              break;
+            case 'UserNotConfirmedException':
+              errorMessage = 'Please verify your email address first.';
+              break;
+            case 'InvalidParameterException':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+            case 'TooManyRequestsException':
+              errorMessage = 'Too many failed attempts. Please try again later.';
+              break;
+            case 'NetworkError':
+              errorMessage = 'Network error. Please check your connection.';
+              break;
+            default:
+              errorMessage = error.message || errorMessage;
+          }
+        } else {
+          errorMessage = error.message || errorMessage;
         }
         
         showError(errorMessage);
