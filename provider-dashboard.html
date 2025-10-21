@@ -761,15 +761,37 @@
         if (data.profileImage) previewImg.src = data.profileImage;
       });
 
-      // Preview on select
+      // Preview on select and update immediately
       avatarInput.addEventListener('change', () => {
         const file = avatarInput.files && avatarInput.files[0];
         if (!file) return;
+        
+        // Validate file type immediately
+        if (!file.type.match(/image\/(png|jpeg|jpg)/)) {
+          dashboard.showNotification('Only PNG and JPG images are allowed', 'error');
+          avatarInput.value = '';
+          return;
+        }
+        
+        // Validate file size immediately
+        if (file.size > 2 * 1024 * 1024) {
+          dashboard.showNotification('Image size must be less than 2MB', 'error');
+          avatarInput.value = '';
+          return;
+        }
+        
         const reader = new FileReader();
         reader.onload = (e) => {
+          // Update preview in modal
           previewImg.src = e.target.result;
+          
+          // Update header image preview
           const headerImg = document.getElementById('profileImage');
           if (headerImg) headerImg.src = e.target.result;
+          
+          // Update sidebar avatar preview
+          const sidebarImg = document.getElementById('sidebarAvatarProvider');
+          if (sidebarImg) sidebarImg.src = e.target.result;
         };
         reader.readAsDataURL(file);
       });
