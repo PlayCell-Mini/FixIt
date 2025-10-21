@@ -55,7 +55,10 @@ module.exports.awsServices = awsServices;
 
 // API Routes
 const apiRoutes = require('./routes/api');
+const marketplaceRoutes = require('./routes/marketplace');
+
 app.use('/api', apiRoutes);
+app.use('/api', marketplaceRoutes);
 
 // Serve index.html on root
 app.get('/', (req, res) => {

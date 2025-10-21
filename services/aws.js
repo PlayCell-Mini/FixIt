@@ -11,7 +11,8 @@ class AWSServices {
     this.tables = {
       users: process.env.DYNAMODB_USERS_TABLE || 'FixIt-Users',
       providers: process.env.DYNAMODB_PROVIDERS_TABLE || 'FixIt-Providers',
-      jobs: process.env.DYNAMODB_JOBS_TABLE || 'FixIt-Jobs'
+      jobs: process.env.DYNAMODB_JOBS_TABLE || 'FixIt-Jobs',
+      marketplaceUsers: process.env.DYNAMODB_MARKETPLACE_USERS_TABLE || 'MarketplaceUsers'
     };
     this.s3Bucket = process.env.S3_BUCKET || 'fixit-profile-images';
   }
@@ -165,6 +166,51 @@ class AWSServices {
       return await this.cognito.initiateAuth(params).promise();
     } catch (error) {
       console.error('Cognito Sign In Error:', error);
+      throw error;
+    }
+  }
+
+  // ==================== MARKETPLACE OPERATIONS ====================
+
+  async createServiceRequest(requestData) {
+    const { workerId, customerId, serviceType, description } = requestData;
+    
+    const item = {
+      requestId: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      workerId,
+      customerId,
+      serviceType,
+      description,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const params = {
+      TableName: this.tables.marketplaceUsers,
+      Item: item
+    };
+
+    try {
+      await this.dynamoDB.put(params).promise();
+      return item;
+    } catch (error) {
+      console.error('DynamoDB Create Service Request Error:', error);
+      throw error;
+    }
+  }
+
+  async getAllServiceProviders() {
+    const params = {
+      TableName: this.tables.marketplaceUsers,
+      FilterExpression: 'attribute_exists(serviceType)'
+    };
+
+    try {
+      const result = await this.dynamoDB.scan(params).promise();
+      return result.Items || [];
+    } catch (error) {
+      console.error('DynamoDB Get Service Providers Error:', error);
       throw error;
     }
   }
