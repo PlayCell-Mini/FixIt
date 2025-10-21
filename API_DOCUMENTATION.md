@@ -206,6 +206,116 @@ fetch('http://localhost:3000/api/services?serviceType=Plumber')
 
 ---
 
+### 3. Upload File to S3
+
+**POST** `/api/upload`
+
+Uploads a file (image) to AWS S3 bucket.
+
+#### Request Type
+`multipart/form-data`
+
+#### Form Data Fields
+- `file` (File, required): Image file to upload (PNG/JPG only, max 5MB)
+- `userId` (string, required): User ID for organizing files
+- `fileType` (string, optional): Type of file - "profile" or "job" (default: "profile")
+
+#### File Storage Paths
+- **Profile photos**: `profilePhotos/{userId}/profile.jpg`
+- **Job photos**: `jobPhotos/{userId}/{timestamp}.{ext}`
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "File uploaded successfully",
+  "fileUrl": "https://fixit-profile-images.s3.ap-south-1.amazonaws.com/profilePhotos/user123/profile.jpg",
+  "key": "profilePhotos/user123/profile.jpg"
+}
+```
+
+#### Error Response (400 Bad Request)
+```json
+{
+  "success": false,
+  "error": "No file uploaded",
+  "message": "Please provide a file to upload"
+}
+```
+
+#### Error Response (400 - File Too Large)
+```json
+{
+  "success": false,
+  "error": "File too large",
+  "message": "File size must be less than 5MB"
+}
+```
+
+#### Error Response (500 Internal Server Error)
+```json
+{
+  "success": false,
+  "error": "Upload failed",
+  "message": "Failed to upload file to S3",
+  "details": "Error details (only in development mode)"
+}
+```
+
+#### cURL Example (Profile Photo)
+```bash
+curl -X POST http://localhost:3000/api/upload \
+  -F "file=@/path/to/profile.jpg" \
+  -F "userId=user123" \
+  -F "fileType=profile"
+```
+
+#### cURL Example (Job Photo)
+```bash
+curl -X POST http://localhost:3000/api/upload \
+  -F "file=@/path/to/job-site.jpg" \
+  -F "userId=worker456" \
+  -F "fileType=job"
+```
+
+#### JavaScript Example (Using FormData)
+```javascript
+// Upload profile picture
+const fileInput = document.getElementById('profilePicInput');
+const file = fileInput.files[0];
+const userId = 'user123';
+
+const formData = new FormData();
+formData.append('file', file);
+formData.append('userId', userId);
+formData.append('fileType', 'profile');
+
+fetch('http://localhost:3000/api/upload', {
+  method: 'POST',
+  body: formData
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log('File uploaded:', data.fileUrl);
+    // Update UI with new image URL
+    document.getElementById('avatar').src = data.fileUrl;
+  })
+  .catch(error => console.error('Upload error:', error));
+```
+
+#### Using apiClient.js
+```javascript
+// Upload profile picture
+const response = await apiClient.uploadProfilePicture(file, userId);
+console.log('Uploaded:', response.fileUrl);
+
+// Upload job photo
+const response = await apiClient.uploadJobPhoto(file, userId);
+console.log('Uploaded:', response.fileUrl);
+```
+
+---
+
 ## Valid Service Types
 
 - Plumber
@@ -260,14 +370,27 @@ All endpoints implement robust error handling:
 
 ## Testing Checklist
 
+### Marketplace APIs
 - [ ] POST /api/hire with valid data
 - [ ] POST /api/hire with missing fields
 - [ ] POST /api/hire with invalid service type
 - [ ] GET /api/services (all)
 - [ ] GET /api/services?serviceType=Plumber
+
+### File Upload APIs
+- [ ] POST /api/upload with profile photo
+- [ ] POST /api/upload with job photo
+- [ ] POST /api/upload without file (should fail)
+- [ ] POST /api/upload without userId (should fail)
+- [ ] POST /api/upload with file > 5MB (should fail)
+- [ ] POST /api/upload with non-image file (should fail)
+- [ ] Verify files appear in S3 bucket
+
+### Error Handling
 - [ ] Verify error handling (500 errors)
 - [ ] Check DynamoDB table for created items
 - [ ] Verify console logs on server
+- [ ] Test with invalid credentials
 
 ---
 

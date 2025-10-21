@@ -116,9 +116,11 @@
   <!-- AWS SDK v2 for Browser -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
   <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
 
   <script>
     const aws = awsService;
+    const api = apiClient;
 
     // Dashboard State Management
     class OwnerDashboard {
@@ -810,7 +812,7 @@
         reader.readAsDataURL(file);
       });
 
-      // STEP 2 & 3: Save profile with image upload to AWS S3 and DynamoDB
+      // STEP 2 & 3: Save profile with image upload to backend S3 API and DynamoDB
       saveBtn.addEventListener('click', async () => {
         const currentUser = aws.getCurrentUser();
         if (!currentUser) {
@@ -832,7 +834,7 @@
           return;
         }
 
-        // Set loading state (setIsSaving(true))
+        // Set loading state
         saveBtn.disabled = true;
         saveBtn.textContent = 'Saving...';
         saveBtn.style.opacity = '0.7';
@@ -847,9 +849,9 @@
           const file = avatarInput.files && avatarInput.files[0];
           
           if (file) {
-            // Validate file size (2MB max)
-            if (file.size > 2 * 1024 * 1024) {
-              throw new Error('Image size must be less than 2MB');
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+              throw new Error('Image size must be less than 5MB');
             }
 
             // Validate file type (PNG/JPG only)
@@ -857,18 +859,18 @@
               throw new Error('Only PNG and JPG images are allowed');
             }
 
-            console.log('STEP 2: Uploading image to AWS S3...');
+            console.log('📤 Uploading image to backend S3 API...');
             
-            // Upload file to AWS S3 at profilePhotos/{userId}/profile.jpg
-            const imageURL = await aws.uploadProfilePicture(file, currentUser.userId);
+            // Upload file to backend S3 API
+            const uploadResponse = await api.uploadProfilePicture(file, currentUser.userId);
             
-            console.log('Image uploaded successfully. URL:', imageURL);
+            console.log('✅ Image uploaded successfully. URL:', uploadResponse.fileUrl);
             
-            // STEP 1: Add profileURL to updateData (will be saved to DynamoDB)
-            updateData.profileURL = imageURL;
+            // Add profileURL to updateData (will be saved to DynamoDB)
+            updateData.profileURL = uploadResponse.fileUrl;
           }
 
-          console.log('STEP 2: Saving to AWS DynamoDB users table...');
+          console.log('💾 Saving profile to DynamoDB users table...');
           
           // Save data to DynamoDB
           await aws.updateUserProfile(currentUser.userId, updateData, 'user');
@@ -876,9 +878,9 @@
           console.log('✅ Profile data saved to DynamoDB successfully!');
           console.log('Saved data:', updateData);
           
-          // STEP 3: UI update after save
+          // UI update after save
           if (updateData.profileURL) {
-            // Update local state - refresh image in UI instantly
+            // Update sidebar avatar with new URL
             const sidebarImg = document.getElementById('sidebarAvatarOwner');
             if (sidebarImg) {
               sidebarImg.src = updateData.profileURL;
@@ -897,7 +899,7 @@
           const errorMessage = err.message || 'Failed to update profile. Please try again.';
           dashboard.showNotification(errorMessage, 'error');
         } finally {
-          // IMPORTANT: setIsSaving(false) in both success and error cases
+          // Reset loading state
           saveBtn.disabled = false;
           saveBtn.textContent = 'Save Changes';
           saveBtn.style.opacity = '1';

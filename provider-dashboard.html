@@ -117,9 +117,11 @@
   <!-- AWS SDK v2 for Browser -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
   <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
 
   <script>
     const aws = awsService;
+    const api = apiClient;
 
     // Dashboard State Management
     class ProviderDashboard {
@@ -183,17 +185,24 @@
         }
 
         // Real-time listener for profile picture updates
-        auth.onAuthStateChanged(async (user) => {
-          if (!user) return;
-          db.collection('providers').doc(user.uid).onSnapshot((doc) => {
-            const data = doc.exists ? doc.data() : {};
-            const img = document.getElementById('sidebarAvatarProvider');
-            if (img && data.profileURL) {
-              img.src = data.profileURL;
-              console.log('Real-time update: Profile picture changed to', data.profileURL);
+        const currentUser = aws.getCurrentUser();
+        if (currentUser) {
+          // Poll for updates every 30 seconds (or use AWS AppSync for real-time)
+          setInterval(async () => {
+            try {
+              const userData = await aws.getUserProfile(currentUser.userId, 'provider');
+              if (userData && userData.profileURL) {
+                const img = document.getElementById('sidebarAvatarProvider');
+                if (img && img.src !== userData.profileURL) {
+                  img.src = userData.profileURL;
+                  console.log('Real-time update: Profile picture changed to', userData.profileURL);
+                }
+              }
+            } catch (error) {
+              console.error('Error polling profile updates:', error);
             }
-          });
-        });
+          }, 30000);
+        }
 
         // Sidebar: Edit Profile (icon)
         const editSidebar = document.getElementById('sidebarEditProfile');
@@ -250,38 +259,45 @@
       }
 
       async checkAuthState() {
-        auth.onAuthStateChanged(async (user) => {
-          if (!user) {
-            window.location.href = "login.html";
-            return;
-          }
+        const currentUser = aws.getCurrentUser();
+        
+        if (!currentUser) {
+          window.location.href = "login.html";
+          return;
+        }
+        
+        try {
+          // Fetch user data from DynamoDB to verify role
+          const userData = await aws.getUserProfile(currentUser.userId, 'user');
           
-          const docRef = await db.collection('users').doc(user.uid).get();
-          if (!docRef.exists || docRef.data().role !== 'provider') {
+          if (!userData || userData.role !== 'provider') {
             alert('Access denied!');
-            auth.signOut();
+            aws.signOut();
             window.location.href = "login.html";
             return;
           }
           
-          this.loadUserProfile(user);
-        });
+          this.loadUserProfile(currentUser);
+        } catch (error) {
+          console.error('Error checking auth state:', error);
+          window.location.href = "login.html";
+        }
       }
 
       async loadUserProfile(user) {
         try {
-          // STEP 4: Fetch profileURL from Firestore on page load
-          const profile = await db.collection('providers').doc(user.uid).get();
-          if (profile.exists) {
-            const data = profile.data();
-            console.log('Loading provider profile:', data);
+          // Fetch profile data from DynamoDB
+          const profile = await aws.getUserProfile(user.userId, 'provider');
+          
+          if (profile) {
+            console.log('Loading provider profile:', profile);
             
-            // Display profile picture from Firestore if exists
-            if (data.profileURL) {
+            // Display profile picture if exists
+            if (profile.profileURL) {
               const sidebarImg = document.getElementById('sidebarAvatarProvider');
               if (sidebarImg) {
-                sidebarImg.src = data.profileURL;
-                console.log('Profile picture loaded from database:', data.profileURL);
+                sidebarImg.src = profile.profileURL;
+                console.log('Profile picture loaded from database:', profile.profileURL);
               }
             }
           }
@@ -297,19 +313,20 @@
 
       async loadHireRequests() {
         try {
-          const user = auth.currentUser;
-          if (!user) return;
+          const currentUser = aws.getCurrentUser();
+          if (!currentUser) return;
 
-          const requestsSnapshot = await db.collection('jobs')
-            .where('providerId', '==', user.uid)
-            .where('status', '==', 'pending')
-            .orderBy('createdAt', 'desc')
-            .get();
-
+          // Fetch service requests from API
+          // Note: This would need a new API endpoint for provider-specific requests
+          // For now, we'll use a placeholder - you'll need to implement GET /api/requests/:providerId
+          console.log('Loading hire requests for provider:', currentUser.userId);
+          
+          // TODO: Implement API endpoint for fetching provider-specific hire requests
+          // const response = await api.get(`/api/requests/provider/${currentUser.userId}`);
+          // this.requests = response.data || [];
+          
+          // Temporary placeholder
           this.requests = [];
-          requestsSnapshot.forEach(doc => {
-            this.requests.push({ id: doc.id, ...doc.data() });
-          });
 
           this.renderHireRequests();
           this.updateRequestCount();
@@ -320,19 +337,15 @@
 
       async loadCompletedJobs() {
         try {
-          const user = auth.currentUser;
-          if (!user) return;
+          const currentUser = aws.getCurrentUser();
+          if (!currentUser) return;
 
-          const jobsSnapshot = await db.collection('jobs')
-            .where('providerId', '==', user.uid)
-            .where('status', '==', 'completed')
-            .orderBy('completedAt', 'desc')
-            .get();
-
+          // TODO: Implement API endpoint for fetching completed jobs
+          // const response = await api.get(`/api/jobs/completed/${currentUser.userId}`);
+          // this.completedJobs = response.data || [];
+          
+          // Temporary placeholder
           this.completedJobs = [];
-          jobsSnapshot.forEach(doc => {
-            this.completedJobs.push({ id: doc.id, ...doc.data() });
-          });
 
           this.renderCompletedJobs();
         } catch (error) {
@@ -524,10 +537,10 @@
 
       async acceptRequest(requestId) {
         try {
-          await db.collection('jobs').doc(requestId).update({
-            status: 'accepted',
-            acceptedAt: new Date()
-          });
+          // TODO: Implement API endpoint for accepting requests
+          // await api.put(`/api/requests/${requestId}/accept`);
+          
+          console.log('Accepting request:', requestId);
           
           this.loadHireRequests();
           this.showNotification('Request accepted successfully!', 'success');
@@ -539,10 +552,10 @@
 
       async rejectRequest(requestId) {
         try {
-          await db.collection('jobs').doc(requestId).update({
-            status: 'rejected',
-            rejectedAt: new Date()
-          });
+          // TODO: Implement API endpoint for rejecting requests
+          // await api.put(`/api/requests/${requestId}/reject`);
+          
+          console.log('Rejecting request:', requestId);
           
           this.loadHireRequests();
           this.showNotification('Request rejected', 'info');
@@ -583,14 +596,11 @@
       }
 
       logout() {
-        auth.signOut().then(() => {
-          this.showNotification('Logged out successfully', 'success');
-          setTimeout(() => {
-            window.location.href = "login.html";
-          }, 400);
-        }).catch((err) => {
-          this.showNotification(err?.message || 'Logout failed', 'error');
-        });
+        aws.signOut();
+        this.showNotification('Logged out successfully', 'success');
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 400);
       }
 
       showNotification(message, type = 'info') {
@@ -752,27 +762,30 @@
       cancelBtn.addEventListener('click', closeModal);
 
       // Pre-fill fields with current data when user logs in
-      auth.onAuthStateChanged(async (user) => {
-        if (!user) return;
-        try {
-          const profileDoc = await db.collection('providers').doc(user.uid).get();
-          const data = profileDoc.exists ? profileDoc.data() : {};
-          
-          document.getElementById('editName').value = data.name || '';
-          document.getElementById('editServiceType').value = (data.serviceType || 'painter');
-          document.getElementById('editExperience').value = (data.experience || '5').toString().replace('+','');
-          document.getElementById('editDaily').value = data.dailyRate || '';
-          document.getElementById('editHourly').value = data.hourlyRate || '';
-          document.getElementById('editAddress').value = data.address || '';
-          
-          // Load existing profile picture to modal preview
-          if (data.profileURL) {
-            previewImg.src = data.profileURL;
+      const currentUser = aws.getCurrentUser();
+      if (currentUser) {
+        (async () => {
+          try {
+            const profileData = await aws.getUserProfile(currentUser.userId, 'provider');
+            
+            if (profileData) {
+              document.getElementById('editName').value = profileData.name || '';
+              document.getElementById('editServiceType').value = (profileData.serviceType || 'painter');
+              document.getElementById('editExperience').value = (profileData.experience || '5').toString().replace('+','');
+              document.getElementById('editDaily').value = profileData.dailyRate || '';
+              document.getElementById('editHourly').value = profileData.hourlyRate || '';
+              document.getElementById('editAddress').value = profileData.address || '';
+              
+              // Load existing profile picture to modal preview
+              if (profileData.profileURL) {
+                previewImg.src = profileData.profileURL;
+              }
+            }
+          } catch (error) {
+            console.error('Error prefilling form:', error);
           }
-        } catch (error) {
-          console.error('Error prefilling form:', error);
-        }
-      });
+        })();
+      }
 
       // Preview on select and update immediately
       avatarInput.addEventListener('change', () => {
@@ -804,8 +817,8 @@
 
       // STEP 2 & 3: Save profile with image upload
       saveBtn.addEventListener('click', async () => {
-        const user = auth.currentUser;
-        if (!user) {
+        const currentUser = aws.getCurrentUser();
+        if (!currentUser) {
           dashboard.showNotification('You must be logged in to update your profile', 'error');
           return;
         }
@@ -838,7 +851,7 @@
           return;
         }
 
-        // Set loading state (setIsSaving(true))
+        // Set loading state
         saveBtn.disabled = true;
         saveBtn.textContent = 'Saving...';
         saveBtn.style.opacity = '0.7';
@@ -851,16 +864,16 @@
           dailyRate,
           hourlyRate,
           address,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         };
 
         try {
           const file = avatarInput.files && avatarInput.files[0];
           
           if (file) {
-            // Validate file size (2MB max)
-            if (file.size > 2 * 1024 * 1024) {
-              throw new Error('Image size must be less than 2MB');
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+              throw new Error('Image size must be less than 5MB');
             }
 
             // Validate file type (PNG/JPG only)
@@ -868,30 +881,28 @@
               throw new Error('Only PNG and JPG images are allowed');
             }
 
-            console.log('STEP 2: Uploading image to AWS S3...');
+            console.log('📤 Uploading image to backend S3 API...');
             
-            // Upload file to AWS S3 at profilePhotos/{userId}/profile.jpg
-            const currentUser = aws.getCurrentUser();
-            const imageURL = await aws.uploadProfilePicture(file, currentUser.userId);
+            // Upload file to backend S3 API
+            const uploadResponse = await api.uploadProfilePicture(file, currentUser.userId);
             
-            console.log('Image uploaded successfully. URL:', imageURL);
+            console.log('✅ Image uploaded successfully. URL:', uploadResponse.fileUrl);
             
-            // STEP 1: Add profileURL to updateData (will be saved to DynamoDB)
-            updateData.profileURL = imageURL;
+            // Add profileURL to updateData (will be saved to DynamoDB)
+            updateData.profileURL = uploadResponse.fileUrl;
           }
 
-          console.log('STEP 2: Saving to AWS DynamoDB providers table...');
+          console.log('💾 Saving profile to DynamoDB providers table...');
           
           // Save data to DynamoDB
-          const currentUser = aws.getCurrentUser();
           await aws.updateUserProfile(currentUser.userId, updateData, 'provider');
           
           console.log('✅ Profile data saved to DynamoDB successfully!');
           console.log('Saved data:', updateData);
           
-          // STEP 3: UI update after save
+          // UI update after save
           if (updateData.profileURL) {
-            // Update local state - refresh image in UI instantly
+            // Update sidebar avatar with new URL
             const sidebarImg = document.getElementById('sidebarAvatarProvider');
             if (sidebarImg) {
               sidebarImg.src = updateData.profileURL;
@@ -910,7 +921,7 @@
           const errorMessage = err.message || 'Failed to update profile. Please try again.';
           dashboard.showNotification(errorMessage, 'error');
         } finally {
-          // IMPORTANT: setIsSaving(false) in both success and error cases
+          // Reset loading state
           saveBtn.disabled = false;
           saveBtn.textContent = 'Save Changes';
           saveBtn.style.opacity = '1';
