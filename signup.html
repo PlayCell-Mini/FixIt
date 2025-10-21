@@ -93,9 +93,11 @@
   <!-- AWS SDK for Browser -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
   <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
 
   <script>
     const aws = awsService;
+    const api = apiClient;
 
     // Get DOM elements
     const signupForm = document.getElementById('signupForm');
@@ -287,22 +289,17 @@
       setLoadingState(true);
 
       try {
-        // Sign up with AWS Cognito
+        console.log('📝 Registering user via backend API...');
+        
+        // Sign up via backend API (creates user in Cognito User Pool)
         const signUpResult = await aws.signUp(email, password, {
-          email: email,
-          name: fullName
+          fullName: fullName,
+          role: role,
+          serviceType: null // Can be added later for providers
         });
 
-        const userId = signUpResult.UserSub;
-
-        // Save user data to DynamoDB with profileURL initialized
-        await aws.saveUserProfile(userId, {
-          fullName: fullName,
-          email: email,
-          role: role,
-          profileURL: '', // Initialize empty profileURL field for later use
-          createdAt: new Date().toISOString()
-        }, role === 'provider' ? 'provider' : 'user');
+        console.log('✅ User registered successfully!');
+        console.log('👤 User ID:', signUpResult.data.userId);
 
         // Show success message
         showSuccess('Account created successfully! Please check your email to verify your account.');

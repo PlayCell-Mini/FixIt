@@ -147,6 +147,46 @@ class APIClient {
     }
   }
 
+  // ==================== AUTHENTICATION APIs ====================
+
+  /**
+   * Sign up new user
+   * @param {object} userData - { email, password, fullName, role, serviceType? }
+   * @returns {Promise<any>}
+   */
+  async signup(userData) {
+    return this.post('/api/auth/signup', userData);
+  }
+
+  /**
+   * Login user and get temporary AWS credentials
+   * @param {string} email
+   * @param {string} password
+   * @returns {Promise<any>} - { tokens, user, awsCredentials, identityId }
+   */
+  async login(email, password) {
+    return this.post('/api/auth/login', { email, password });
+  }
+
+  /**
+   * Verify email with confirmation code
+   * @param {string} email
+   * @param {string} code
+   * @returns {Promise<any>}
+   */
+  async verifyEmail(email, code) {
+    return this.post('/api/auth/verify', { email, code });
+  }
+
+  /**
+   * Refresh AWS credentials
+   * @param {string} idToken
+   * @returns {Promise<any>} - { awsCredentials, identityId }
+   */
+  async refreshCredentials(idToken) {
+    return this.post('/api/auth/refresh', { idToken });
+  }
+
   // ==================== MARKETPLACE APIs ====================
 
   /**

@@ -56,9 +56,11 @@
   <!-- AWS SDK for Browser -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
   <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
 
   <script>
     const aws = awsService;
+    const api = apiClient;
 
     // Get DOM elements
     const loginForm = document.getElementById('loginForm');
@@ -162,15 +164,20 @@
       setLoadingState(true);
 
       try {
-        // Sign in with AWS Cognito
-        await aws.signIn(email, password);
-
-        // Get current user from token
-        const currentUser = aws.getCurrentUser();
+        console.log('🔑 Authenticating user with backend API...');
         
-        // Get user role from DynamoDB
-        const userData = await aws.getUserProfile(currentUser.userId, 'user');
-        const role = userData ? userData.role : 'unknown';
+        // Sign in via backend API - receives temporary AWS credentials
+        const authResponse = await aws.signIn(email, password);
+        
+        console.log('✅ Authentication successful!');
+        console.log('👤 User:', authResponse.user);
+        console.log('🔑 Temporary credentials received (scoped to user)');
+        console.log('⏰ Credentials expire at:', authResponse.awsCredentials.expiration);
+        
+        // AWS SDK is now initialized with temporary credentials
+        // User can now directly access S3 and DynamoDB with scoped permissions
+        
+        const role = authResponse.user.role || 'seeker';
 
         // Show success message briefly
         loginButton.textContent = 'Welcome!';

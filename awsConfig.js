@@ -45,46 +45,150 @@ class AWSService {
     };
   }
 
-  // Initialize AWS SDK (call this after loading AWS SDK scripts)
-  async initialize(accessKeyId, secretAccessKey) {
+  // Initialize AWS SDK (call this with temporary credentials from login)
+  async initializeWithTemporaryCredentials(credentials) {
     try {
-      // Set credentials
+      if (!credentials || !credentials.accessKeyId || !credentials.secretAccessKey || !credentials.sessionToken) {
+        throw new Error('Invalid temporary credentials provided');
+      }
+
+      console.log('⚙️ Initializing AWS SDK with temporary credentials...');
+      console.log('⏰ Credentials expire at:', credentials.expiration);
+
+      // Set temporary credentials from Cognito Identity Pool
       AWS.config.update({
-        region: AWS_CONFIG.region,
+        region: this.config.region,
         credentials: new AWS.Credentials({
-          accessKeyId: accessKeyId || AWS_CONFIG.credentials.accessKeyId,
-          secretAccessKey: secretAccessKey || AWS_CONFIG.credentials.secretAccessKey
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken
         })
       });
 
-      // Initialize service clients
+      // Initialize service clients with temporary credentials
       this.s3 = new AWS.S3({
         region: S3_CONFIG.region,
         params: { Bucket: S3_CONFIG.bucket }
       });
 
       this.dynamoDB = new AWS.DynamoDB.DocumentClient({
-        region: AWS_CONFIG.region
+        region: this.config.region
       });
 
-      this.cognito = new AWS.CognitoIdentityServiceProvider({
-        region: COGNITO_CONFIG.region
-      });
-
+      // Store credentials expiration for refresh logic
+      this.credentialsExpiration = new Date(credentials.expiration);
       this.initialized = true;
-      console.log('✅ AWS Services initialized successfully');
+
+      console.log('✅ AWS Services initialized with temporary credentials');
+      console.log('🔑 User has scoped access to S3 and DynamoDB');
+      
+      // Set up auto-refresh before expiration (5 minutes before)
+      this.setupCredentialRefresh();
+      
       return true;
     } catch (error) {
       console.error('❌ AWS Initialization Error:', error);
-      throw new Error(`Failed to initialize AWS: ${error.message}`);
+      throw new Error(`Failed to initialize AWS with temporary credentials: ${error.message}`);
     }
   }
 
   // Check if AWS is initialized
   ensureInitialized() {
     if (!this.initialized) {
-      throw new Error('AWS Service not initialized. Call initialize() first.');
+      throw new Error('AWS Service not initialized. Please login first to get temporary credentials.');
     }
+
+    // Check if credentials are expired
+    if (this.credentialsExpiration && new Date() >= this.credentialsExpiration) {
+      throw new Error('AWS credentials have expired. Please refresh your session.');
+    }
+  }
+
+  /**
+   * Setup automatic credential refresh
+   */
+  setupCredentialRefresh() {
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+
+    if (!this.credentialsExpiration) return;
+
+    // Refresh 5 minutes before expiration
+    const now = new Date();
+    const expirationTime = new Date(this.credentialsExpiration);
+    const refreshTime = new Date(expirationTime.getTime() - 5 * 60 * 1000);
+    const timeUntilRefresh = refreshTime.getTime() - now.getTime();
+
+    if (timeUntilRefresh > 0) {
+      console.log(`🔄 Credentials will auto-refresh in ${Math.round(timeUntilRefresh / 60000)} minutes`);
+      
+      this.refreshTimer = setTimeout(async () => {
+        console.log('🔄 Auto-refreshing AWS credentials...');
+        await this.refreshCredentials();
+      }, timeUntilRefresh);
+    }
+  }
+
+  /**
+   * Refresh AWS credentials
+   */
+  async refreshCredentials() {
+    try {
+      const idToken = localStorage.getItem('idToken');
+      
+      if (!idToken) {
+        console.error('❌ No ID token found for refresh');
+        this.signOut();
+        window.location.href = 'login.html';
+        return;
+      }
+
+      console.log('🔄 Refreshing credentials with backend API...');
+
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ idToken })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to refresh credentials');
+      }
+
+      // Re-initialize with new credentials
+      await this.initializeWithTemporaryCredentials(data.awsCredentials);
+      
+      console.log('✅ Credentials refreshed successfully');
+
+    } catch (error) {
+      console.error('❌ Credential refresh failed:', error);
+      this.signOut();
+      window.location.href = 'login.html';
+    }
+  }
+
+  /**
+   * Get time until credentials expire
+   */
+  getTimeUntilExpiration() {
+    if (!this.credentialsExpiration) return null;
+    
+    const now = new Date();
+    const expiration = new Date(this.credentialsExpiration);
+    return Math.max(0, expiration.getTime() - now.getTime());
+  }
+
+  /**
+   * Check if credentials are about to expire (within 5 minutes)
+   */
+  areCredentialsExpiringSoon() {
+    const timeLeft = this.getTimeUntilExpiration();
+    return timeLeft !== null && timeLeft < 5 * 60 * 1000; // 5 minutes
   }
 
   // ==================== S3 OPERATIONS ====================
@@ -350,29 +454,36 @@ class AWSService {
   // ==================== COGNITO AUTHENTICATION ====================
 
   /**
-   * Sign up new user
+   * Sign up new user (via backend API)
    * @param {string} email - User email
    * @param {string} password - User password
-   * @param {object} attributes - Additional attributes
+   * @param {object} userData - Additional user data
    * @returns {Promise<object>} - Signup result
    */
-  async signUp(email, password, attributes = {}) {
-    this.ensureInitialized();
-    
+  async signUp(email, password, userData = {}) {
     try {
-      const params = {
-        ClientId: COGNITO_CONFIG.clientId,
-        Username: email,
-        Password: password,
-        UserAttributes: Object.keys(attributes).map(key => ({
-          Name: key,
-          Value: attributes[key]
-        }))
-      };
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName: userData.fullName || '',
+          role: userData.role || 'seeker',
+          serviceType: userData.serviceType || null
+        })
+      });
 
-      const result = await this.cognito.signUp(params).promise();
-      console.log('✅ Sign up successful');
-      return result;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed');
+      }
+
+      console.log('✅ Sign up successful via backend API');
+      return data;
     } catch (error) {
       console.error('❌ Sign Up Error:', error);
       throw error;
@@ -380,35 +491,46 @@ class AWSService {
   }
 
   /**
-   * Sign in user
+   * Sign in user and initialize with temporary credentials (via backend API)
    * @param {string} email - User email
    * @param {string} password - User password
-   * @returns {Promise<object>} - Authentication result
+   * @returns {Promise<object>} - Authentication result with AWS credentials
    */
   async signIn(email, password) {
-    this.ensureInitialized();
-    
     try {
-      const params = {
-        AuthFlow: 'USER_PASSWORD_AUTH',
-        ClientId: COGNITO_CONFIG.clientId,
-        AuthParameters: {
-          USERNAME: email,
-          PASSWORD: password
-        }
-      };
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
 
-      const result = await this.cognito.initiateAuth(params).promise();
-      
-      // Store tokens
-      if (result.AuthenticationResult) {
-        localStorage.setItem('accessToken', result.AuthenticationResult.AccessToken);
-        localStorage.setItem('idToken', result.AuthenticationResult.IdToken);
-        localStorage.setItem('refreshToken', result.AuthenticationResult.RefreshToken);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
       }
+
+      console.log('✅ Sign in successful via backend API');
+      console.log('👤 User:', data.user);
+
+      // Store tokens in localStorage
+      localStorage.setItem('idToken', data.tokens.idToken);
+      localStorage.setItem('accessToken', data.tokens.accessToken);
+      localStorage.setItem('refreshToken', data.tokens.refreshToken);
+      localStorage.setItem('identityId', data.identityId);
       
-      console.log('✅ Sign in successful');
-      return result;
+      // Store user data
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      this.currentUser = data.user;
+
+      // Initialize AWS SDK with temporary credentials
+      await this.initializeWithTemporaryCredentials(data.awsCredentials);
+
+      console.log('✅ AWS SDK initialized with scoped temporary credentials');
+      
+      return data;
     } catch (error) {
       console.error('❌ Sign In Error:', error);
       throw error;
@@ -419,34 +541,46 @@ class AWSService {
    * Sign out user
    */
   signOut() {
+    // Clear all stored tokens and credentials
     localStorage.removeItem('accessToken');
     localStorage.removeItem('idToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('identityId');
+    localStorage.removeItem('userData');
+    
+    // Clear AWS credentials
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    
     this.currentUser = null;
-    console.log('✅ Sign out successful');
+    this.initialized = false;
+    this.credentialsExpiration = null;
+    
+    console.log('✅ Sign out successful - all credentials cleared');
   }
 
   /**
-   * Get current user from token
-   * @returns {object|null} - Decoded user data
+   * Get current user from stored data
+   * @returns {object|null} - User data
    */
   getCurrentUser() {
-    const idToken = localStorage.getItem('idToken');
-    if (!idToken) return null;
-
-    try {
-      // Decode JWT token (simple base64 decode)
-      const payload = idToken.split('.')[1];
-      const decoded = JSON.parse(atob(payload));
-      return {
-        userId: decoded.sub,
-        email: decoded.email,
-        ...decoded
-      };
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return null;
+    if (this.currentUser) {
+      return this.currentUser;
     }
+
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      try {
+        this.currentUser = JSON.parse(userData);
+        return this.currentUser;
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+      }
+    }
+
+    return null;
   }
 
   /**

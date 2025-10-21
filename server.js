@@ -16,7 +16,8 @@ app.use(express.static(path.join(__dirname)));
 const requiredEnvVars = [
   'AWS_REGION',
   'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY'
+  'AWS_SECRET_ACCESS_KEY',
+  'COGNITO_IDENTITY_POOL_ID'
 ];
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -37,6 +38,7 @@ AWS.config.update({
 const dynamoDB = new AWS.DynamoDB.DocumentClient();
 const s3 = new AWS.S3();
 const cognito = new AWS.CognitoIdentityServiceProvider();
+const cognitoIdentity = new AWS.CognitoIdentity();
 
 // Initialize AWS service helper
 const awsServices = new AWSServices(dynamoDB, s3, cognito);
@@ -45,22 +47,26 @@ console.log('✅ AWS SDK initialized successfully');
 console.log('📍 Region:', process.env.AWS_REGION);
 console.log('🗄️  DynamoDB DocumentClient ready');
 console.log('📦 S3 Client ready');
-console.log('🔐 Cognito Client ready');
+console.log('🔐 Cognito User Pool Client ready');
+console.log('🎫 Cognito Identity Pool Client ready');
 
 // Export AWS clients and services for use in routes
 module.exports.dynamoDB = dynamoDB;
 module.exports.s3 = s3;
 module.exports.cognito = cognito;
+module.exports.cognitoIdentity = cognitoIdentity;
 module.exports.awsServices = awsServices;
 
 // API Routes
 const apiRoutes = require('./routes/api');
 const marketplaceRoutes = require('./routes/marketplace');
 const uploadRoutes = require('./routes/upload');
+const authRoutes = require('./routes/auth');
 
 app.use('/api', apiRoutes);
 app.use('/api', marketplaceRoutes);
 app.use('/api', uploadRoutes);
+app.use('/api/auth', authRoutes);
 
 // Serve index.html on root
 app.get('/', (req, res) => {
