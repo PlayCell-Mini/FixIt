@@ -255,15 +255,15 @@
           const profile = await db.collection('users').doc(user.uid).get();
           if (profile.exists) {
             const data = profile.data();
-            document.getElementById('ownerName').textContent = data.fullName || 'Service Owner';
+            console.log('Loading user profile:', data);
             
-            // Load profile image in both header and sidebar
+            // Load profile image to sidebar avatar
             if (data.profileImage) {
-              const headerImg = document.getElementById('profileImage');
-              if (headerImg) headerImg.src = data.profileImage;
-              
               const sidebarImg = document.getElementById('sidebarAvatarOwner');
-              if (sidebarImg) sidebarImg.src = data.profileImage;
+              if (sidebarImg) {
+                sidebarImg.src = data.profileImage;
+                console.log('Sidebar avatar updated with:', data.profileImage);
+              }
             }
           }
         } catch (error) {
@@ -725,14 +725,23 @@
       closeBtn.addEventListener('click', closeModal);
       cancelBtn.addEventListener('click', closeModal);
 
-      // Prefill
+      // Prefill form when modal is opened
       auth.onAuthStateChanged(async (user) => {
         if (!user) return;
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const data = userDoc.exists ? userDoc.data() : {};
-        document.getElementById('editName').value = data.fullName || '';
-        document.getElementById('editAddress').value = data.address || '';
-        if (data.profileImage) previewImg.src = data.profileImage;
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          const data = userDoc.exists ? userDoc.data() : {};
+          
+          document.getElementById('editName').value = data.fullName || '';
+          document.getElementById('editAddress').value = data.address || '';
+          
+          // Load existing profile image to modal preview
+          if (data.profileImage) {
+            previewImg.src = data.profileImage;
+          }
+        } catch (error) {
+          console.error('Error prefilling form:', error);
+        }
       });
 
       // Preview selection and update immediately
@@ -758,14 +767,7 @@
         reader.onload = (e) => {
           // Update preview in modal
           previewImg.src = e.target.result;
-          
-          // Update header image preview
-          const headerImg = document.getElementById('profileImage');
-          if (headerImg) headerImg.src = e.target.result;
-          
-          // Update sidebar avatar preview
-          const sidebarImg = document.getElementById('sidebarAvatarOwner');
-          if (sidebarImg) sidebarImg.src = e.target.result;
+          console.log('Image preview loaded');
         };
         reader.readAsDataURL(file);
       });
@@ -832,13 +834,6 @@
             
             // STEP 3: Add URL to updateData object (will be saved to Firestore)
             updateData.profileImage = url;
-            
-            // STEP 4: Update UI immediately with the new URL
-            const headerImg = document.getElementById('profileImage');
-            if (headerImg) headerImg.src = url;
-            
-            const sidebarImg = document.getElementById('sidebarAvatarOwner');
-            if (sidebarImg) sidebarImg.src = url;
           }
 
           console.log('Saving profile data to Firestore...');
@@ -849,10 +844,13 @@
           console.log('Profile data saved to Firestore successfully!');
           console.log('Saved data:', updateData);
           
-          // Update UI elements
-          if (fullName) {
-            const ownerNameEl = document.getElementById('ownerName');
-            if (ownerNameEl) ownerNameEl.textContent = fullName;
+          // Update sidebar avatar with new image URL
+          if (updateData.profileImage) {
+            const sidebarImg = document.getElementById('sidebarAvatarOwner');
+            if (sidebarImg) {
+              sidebarImg.src = updateData.profileImage;
+              console.log('Sidebar avatar updated after save');
+            }
           }
           
           dashboard.showNotification('Profile updated successfully!', 'success');

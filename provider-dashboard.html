@@ -275,16 +275,15 @@
           const profile = await db.collection('providers').doc(user.uid).get();
           if (profile.exists) {
             const data = profile.data();
-            document.getElementById('providerName').textContent = data.name || 'Provider';
-            document.getElementById('experienceLevel').textContent = `${data.experience || '5'}+ Years`;
+            console.log('Loading provider profile:', data);
             
-            // Load profile image in both header and sidebar
+            // Load profile image to sidebar avatar
             if (data.profileImage) {
-              const headerImg = document.getElementById('profileImage');
-              if (headerImg) headerImg.src = data.profileImage;
-              
               const sidebarImg = document.getElementById('sidebarAvatarProvider');
-              if (sidebarImg) sidebarImg.src = data.profileImage;
+              if (sidebarImg) {
+                sidebarImg.src = data.profileImage;
+                console.log('Sidebar avatar updated with:', data.profileImage);
+              }
             }
           }
         } catch (error) {
@@ -753,18 +752,27 @@
       closeBtn.addEventListener('click', closeModal);
       cancelBtn.addEventListener('click', closeModal);
 
-      // Pre-fill fields with current data
+      // Pre-fill fields with current data when user logs in
       auth.onAuthStateChanged(async (user) => {
         if (!user) return;
-        const profileDoc = await db.collection('providers').doc(user.uid).get();
-        const data = profileDoc.exists ? profileDoc.data() : {};
-        document.getElementById('editName').value = data.name || '';
-        document.getElementById('editServiceType').value = (data.serviceType || 'painter');
-        document.getElementById('editExperience').value = (data.experience || '5').toString().replace('+','');
-        document.getElementById('editDaily').value = data.dailyRate || '';
-        document.getElementById('editHourly').value = data.hourlyRate || '';
-        document.getElementById('editAddress').value = data.address || '';
-        if (data.profileImage) previewImg.src = data.profileImage;
+        try {
+          const profileDoc = await db.collection('providers').doc(user.uid).get();
+          const data = profileDoc.exists ? profileDoc.data() : {};
+          
+          document.getElementById('editName').value = data.name || '';
+          document.getElementById('editServiceType').value = (data.serviceType || 'painter');
+          document.getElementById('editExperience').value = (data.experience || '5').toString().replace('+','');
+          document.getElementById('editDaily').value = data.dailyRate || '';
+          document.getElementById('editHourly').value = data.hourlyRate || '';
+          document.getElementById('editAddress').value = data.address || '';
+          
+          // Load existing profile image to modal preview
+          if (data.profileImage) {
+            previewImg.src = data.profileImage;
+          }
+        } catch (error) {
+          console.error('Error prefilling form:', error);
+        }
       });
 
       // Preview on select and update immediately
@@ -790,14 +798,7 @@
         reader.onload = (e) => {
           // Update preview in modal
           previewImg.src = e.target.result;
-          
-          // Update header image preview
-          const headerImg = document.getElementById('profileImage');
-          if (headerImg) headerImg.src = e.target.result;
-          
-          // Update sidebar avatar preview
-          const sidebarImg = document.getElementById('sidebarAvatarProvider');
-          if (sidebarImg) sidebarImg.src = e.target.result;
+          console.log('Image preview loaded');
         };
         reader.readAsDataURL(file);
       });
@@ -883,13 +884,6 @@
             
             // STEP 3: Add URL to updateData object (will be saved to Firestore)
             updateData.profileImage = url;
-            
-            // STEP 4: Update UI immediately with the new URL
-            const headerImg = document.getElementById('profileImage');
-            if (headerImg) headerImg.src = url;
-            
-            const sidebarImg = document.getElementById('sidebarAvatarProvider');
-            if (sidebarImg) sidebarImg.src = url;
           }
 
           console.log('Saving profile data to Firestore...');
@@ -900,14 +894,13 @@
           console.log('Profile data saved to Firestore successfully!');
           console.log('Saved data:', updateData);
           
-          // Update UI elements
-          if (name) {
-            const providerNameEl = document.getElementById('providerName');
-            if (providerNameEl) providerNameEl.textContent = name;
-          }
-          if (experience) {
-            const experienceLevelEl = document.getElementById('experienceLevel');
-            if (experienceLevelEl) experienceLevelEl.textContent = `${experience}+ Years`;
+          // Update sidebar avatar with new image URL
+          if (updateData.profileImage) {
+            const sidebarImg = document.getElementById('sidebarAvatarProvider');
+            if (sidebarImg) {
+              sidebarImg.src = updateData.profileImage;
+              console.log('Sidebar avatar updated after save');
+            }
           }
 
           // Show success toast
