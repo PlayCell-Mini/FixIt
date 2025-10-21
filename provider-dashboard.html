@@ -777,7 +777,10 @@
       // Save profile: upload image if provided, then persist Firestore
       saveBtn.addEventListener('click', async () => {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user) {
+          dashboard.showNotification('You must be logged in to update your profile', 'error');
+          return;
+        }
 
         const name = (document.getElementById('editName').value || '').trim();
         const serviceType = document.getElementById('editServiceType').value;
@@ -785,6 +788,33 @@
         const dailyRate = Number(document.getElementById('editDaily').value || 0);
         const hourlyRate = Number(document.getElementById('editHourly').value || 0);
         const address = (document.getElementById('editAddress').value || '').trim();
+
+        // Validation
+        if (!name) {
+          dashboard.showNotification('Name is required', 'error');
+          return;
+        }
+
+        if (name.length < 2) {
+          dashboard.showNotification('Name must be at least 2 characters', 'error');
+          return;
+        }
+
+        if (!serviceType) {
+          dashboard.showNotification('Please select a service type', 'error');
+          return;
+        }
+
+        if (dailyRate < 0 || hourlyRate < 0) {
+          dashboard.showNotification('Rates cannot be negative', 'error');
+          return;
+        }
+
+        // Set loading state
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.style.opacity = '0.7';
+        saveBtn.style.cursor = 'not-allowed';
 
         const updateData = {
           name,
@@ -799,26 +829,55 @@
         try {
           const file = avatarInput.files && avatarInput.files[0];
           if (file) {
+            // Validate file size (2MB max)
+            if (file.size > 2 * 1024 * 1024) {
+              throw new Error('Image size must be less than 2MB');
+            }
+
+            // Validate file type
+            if (!file.type.match(/image\/(png|jpeg|jpg)/)) {
+              throw new Error('Only PNG and JPG images are allowed');
+            }
+
             const storageRef = firebase.storage().ref();
             const fileRef = storageRef.child(`profileImages/${user.uid}`);
             await fileRef.put(file);
             const url = await fileRef.getDownloadURL();
             updateData.profileImage = url;
+            
             // Update header image
             const headerImg = document.getElementById('profileImage');
             if (headerImg) headerImg.src = url;
+            
+            // Update sidebar avatar
+            const sidebarImg = document.getElementById('sidebarAvatarProvider');
+            if (sidebarImg) sidebarImg.src = url;
           }
 
           await db.collection('providers').doc(user.uid).set(updateData, { merge: true });
-          // Reflect name/experience in header
-          if (name) document.getElementById('providerName').textContent = name;
-          if (experience) document.getElementById('experienceLevel').textContent = `${experience}+ Years`;
+          
+          // Update UI elements
+          if (name) {
+            const providerNameEl = document.getElementById('providerName');
+            if (providerNameEl) providerNameEl.textContent = name;
+          }
+          if (experience) {
+            const experienceLevelEl = document.getElementById('experienceLevel');
+            if (experienceLevelEl) experienceLevelEl.textContent = `${experience}+ Years`;
+          }
 
-          dashboard.showNotification('Profile updated', 'success');
+          dashboard.showNotification('Profile updated successfully!', 'success');
           closeModal();
         } catch (err) {
-          console.error(err);
-          dashboard.showNotification('Failed to update profile', 'error');
+          console.error('Error updating profile:', err);
+          const errorMessage = err.message || 'Failed to update profile. Please try again.';
+          dashboard.showNotification(errorMessage, 'error');
+        } finally {
+          // Reset loading state
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+          saveBtn.style.opacity = '1';
+          saveBtn.style.cursor = 'pointer';
         }
       });
     })();

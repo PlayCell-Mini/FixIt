@@ -745,10 +745,30 @@
       // Save to Firestore (users) and Storage
       saveBtn.addEventListener('click', async () => {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user) {
+          dashboard.showNotification('You must be logged in to update your profile', 'error');
+          return;
+        }
 
         const fullName = (document.getElementById('editName').value || '').trim();
         const address = (document.getElementById('editAddress').value || '').trim();
+
+        // Validation
+        if (!fullName) {
+          dashboard.showNotification('Full name is required', 'error');
+          return;
+        }
+
+        if (fullName.length < 2) {
+          dashboard.showNotification('Full name must be at least 2 characters', 'error');
+          return;
+        }
+
+        // Set loading state
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.style.opacity = '0.7';
+        saveBtn.style.cursor = 'not-allowed';
 
         const updateData = {
           fullName,
@@ -759,22 +779,51 @@
         try {
           const file = avatarInput.files && avatarInput.files[0];
           if (file) {
+            // Validate file size (2MB max)
+            if (file.size > 2 * 1024 * 1024) {
+              throw new Error('Image size must be less than 2MB');
+            }
+
+            // Validate file type
+            if (!file.type.match(/image\/(png|jpeg|jpg)/)) {
+              throw new Error('Only PNG and JPG images are allowed');
+            }
+
             const storageRef = firebase.storage().ref();
             const fileRef = storageRef.child(`profileImages/${user.uid}`);
             await fileRef.put(file);
             const url = await fileRef.getDownloadURL();
             updateData.profileImage = url;
+            
+            // Update header image
             const headerImg = document.getElementById('profileImage');
             if (headerImg) headerImg.src = url;
+            
+            // Update sidebar avatar
+            const sidebarImg = document.getElementById('sidebarAvatarOwner');
+            if (sidebarImg) sidebarImg.src = url;
           }
 
           await db.collection('users').doc(user.uid).set(updateData, { merge: true });
-          if (fullName) document.getElementById('ownerName').textContent = fullName;
-          dashboard.showNotification('Profile updated', 'success');
+          
+          // Update UI elements
+          if (fullName) {
+            const ownerNameEl = document.getElementById('ownerName');
+            if (ownerNameEl) ownerNameEl.textContent = fullName;
+          }
+          
+          dashboard.showNotification('Profile updated successfully!', 'success');
           closeModal();
         } catch (err) {
-          console.error(err);
-          dashboard.showNotification('Failed to update profile', 'error');
+          console.error('Error updating profile:', err);
+          const errorMessage = err.message || 'Failed to update profile. Please try again.';
+          dashboard.showNotification(errorMessage, 'error');
+        } finally {
+          // Reset loading state
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+          saveBtn.style.opacity = '1';
+          saveBtn.style.cursor = 'pointer';
         }
       });
     })();
