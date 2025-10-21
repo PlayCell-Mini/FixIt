@@ -118,17 +118,6 @@
   <script src="awsConfig.js"></script>
 
   <script>
-    // Initialize AWS Service
-    // IMPORTANT: In production, use Cognito Identity Pool or backend API
-    // Never hardcode credentials in frontend code!
-    const AWS_ACCESS_KEY = ''; // Set from secure source
-    const AWS_SECRET_KEY = ''; // Set from secure source
-    
-    // Initialize AWS (credentials should come from environment or secure config)
-    if (AWS_ACCESS_KEY && AWS_SECRET_KEY) {
-      awsService.initialize(AWS_ACCESS_KEY, AWS_SECRET_KEY);
-    }
-
     const aws = awsService;
 
     // Dashboard State Management
