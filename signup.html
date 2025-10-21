@@ -299,11 +299,12 @@
           displayName: fullName
         });
 
-        // Save user data to Firestore
+        // STEP 1: Save user data to Firestore with profileURL field initialized
         await db.collection('users').doc(user.uid).set({
           fullName: fullName,
           email: user.email,
           role: role,
+          profileURL: '', // Initialize empty profileURL field for later use
           createdAt: new Date(),
           updatedAt: new Date()
         });

@@ -187,13 +187,16 @@
           console.error('logoutBtnSidebar element not found');
         }
 
-        // Update sidebar avatar in real-time
+        // Real-time listener for profile picture updates
         auth.onAuthStateChanged(async (user) => {
           if (!user) return;
           db.collection('providers').doc(user.uid).onSnapshot((doc) => {
             const data = doc.exists ? doc.data() : {};
             const img = document.getElementById('sidebarAvatarProvider');
-            if (img && data.profileImage) img.src = data.profileImage;
+            if (img && data.profileURL) {
+              img.src = data.profileURL;
+              console.log('Real-time update: Profile picture changed to', data.profileURL);
+            }
           });
         });
 
@@ -272,17 +275,18 @@
 
       async loadUserProfile(user) {
         try {
+          // STEP 4: Fetch profileURL from Firestore on page load
           const profile = await db.collection('providers').doc(user.uid).get();
           if (profile.exists) {
             const data = profile.data();
             console.log('Loading provider profile:', data);
             
-            // Load profile image to sidebar avatar
-            if (data.profileImage) {
+            // Display profile picture from Firestore if exists
+            if (data.profileURL) {
               const sidebarImg = document.getElementById('sidebarAvatarProvider');
               if (sidebarImg) {
-                sidebarImg.src = data.profileImage;
-                console.log('Sidebar avatar updated with:', data.profileImage);
+                sidebarImg.src = data.profileURL;
+                console.log('Profile picture loaded from database:', data.profileURL);
               }
             }
           }
@@ -766,9 +770,9 @@
           document.getElementById('editHourly').value = data.hourlyRate || '';
           document.getElementById('editAddress').value = data.address || '';
           
-          // Load existing profile image to modal preview
-          if (data.profileImage) {
-            previewImg.src = data.profileImage;
+          // Load existing profile picture to modal preview
+          if (data.profileURL) {
+            previewImg.src = data.profileURL;
           }
         } catch (error) {
           console.error('Error prefilling form:', error);
@@ -803,7 +807,7 @@
         reader.readAsDataURL(file);
       });
 
-      // Save profile: upload image if provided, then persist Firestore
+      // STEP 2 & 3: Save profile with image upload
       saveBtn.addEventListener('click', async () => {
         const user = auth.currentUser;
         if (!user) {
@@ -856,71 +860,71 @@
         };
 
         try {
-          // Upload image to Firebase Storage if provided (async/await)
           const file = avatarInput.files && avatarInput.files[0];
+          
           if (file) {
             // Validate file size (2MB max)
             if (file.size > 2 * 1024 * 1024) {
               throw new Error('Image size must be less than 2MB');
             }
 
-            // Validate file type
+            // Validate file type (PNG/JPG only)
             if (!file.type.match(/image\/(png|jpeg|jpg)/)) {
               throw new Error('Only PNG and JPG images are allowed');
             }
 
-            console.log('Uploading image to Firebase Storage...');
+            console.log('STEP 2: Uploading image to Firebase Storage...');
             
-            // STEP 1: Upload image file to Firebase Storage
+            // Upload file to Firebase Storage at profilePhotos/{uid}/profile.jpg
             const storageRef = firebase.storage().ref();
-            const fileRef = storageRef.child(`profileImages/${user.uid}`);
+            const fileRef = storageRef.child(`profilePhotos/${user.uid}/profile.jpg`);
             await fileRef.put(file);
             
             console.log('Image uploaded successfully. Getting download URL...');
             
-            // STEP 2: Get the download URL from Firebase Storage
-            const url = await fileRef.getDownloadURL();
-            console.log('Download URL obtained:', url);
+            // Get the download URL using getDownloadURL()
+            const downloadURL = await fileRef.getDownloadURL();
+            console.log('Download URL obtained:', downloadURL);
             
-            // STEP 3: Add URL to updateData object (will be saved to Firestore)
-            updateData.profileImage = url;
+            // STEP 1: Add profileURL to updateData (will be saved to Firestore)
+            updateData.profileURL = downloadURL;
           }
 
-          console.log('Saving profile data to Firestore...');
+          console.log('STEP 2: Saving to Firestore providers collection...');
           
-          // STEP 5: Save all data (including profileImage URL) to Firestore database
+          // Save data to Firestore using set with merge (creates document if doesn't exist)
           await db.collection('providers').doc(user.uid).set(updateData, { merge: true });
           
-          console.log('Profile data saved to Firestore successfully!');
+          console.log('✅ Profile data saved to Firestore successfully!');
           console.log('Saved data:', updateData);
           
-          // Update sidebar avatar with new image URL
-          if (updateData.profileImage) {
+          // STEP 3: UI update after save
+          if (updateData.profileURL) {
+            // Update local state - refresh image in UI instantly
             const sidebarImg = document.getElementById('sidebarAvatarProvider');
             if (sidebarImg) {
-              sidebarImg.src = updateData.profileImage;
-              console.log('Sidebar avatar updated after save');
+              sidebarImg.src = updateData.profileURL;
+              console.log('✅ Sidebar avatar updated with new URL');
             }
           }
 
           // Show success toast
           dashboard.showNotification('Profile updated successfully!', 'success');
           
-          // Close popup on success
+          // Close EditProfile popup
           closeModal();
-        } catch (err) {
-          // Error handling
-          console.error('Error updating profile:', err);
-          const errorMessage = err.message || 'Failed to update profile. Please try again.';
           
-          // Show error toast
+        } catch (err) {
+          console.error('❌ Error updating profile:', err);
+          const errorMessage = err.message || 'Failed to update profile. Please try again.';
           dashboard.showNotification(errorMessage, 'error');
         } finally {
-          // Reset loading state (setIsSaving(false)) - always executes
+          // IMPORTANT: setIsSaving(false) in both success and error cases
           saveBtn.disabled = false;
           saveBtn.textContent = 'Save Changes';
           saveBtn.style.opacity = '1';
           saveBtn.style.cursor = 'pointer';
+          console.log('Loading state reset');
         }
       });
     })();
