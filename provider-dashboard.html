@@ -667,16 +667,18 @@
                     <option value="10">10+</option>
                   </select>
                 </label>
-                <div class="field-row">
-                  <label class="field">
-                    <span>Hourly Rate ($)</span>
-                    <input type="number" id="editHourly" min="0" step="1" placeholder="e.g. 25" />
-                  </label>
-                  <label class="field">
-                    <span>Address</span>
-                    <input type="text" id="editAddress" placeholder="Your address" />
-                  </label>
-                </div>
+                <label class="field">
+                  <span>Daily Rate (PKR Rs:)</span>
+                  <input type="number" id="editDaily" min="0" step="1" placeholder="e.g. 5000" />
+                </label>
+                <label class="field">
+                  <span>Hourly Rate (PKR Rs:)</span>
+                  <input type="number" id="editHourly" min="0" step="1" placeholder="e.g. 500" />
+                </label>
+                <label class="field">
+                  <span>Address</span>
+                  <input type="text" id="editAddress" placeholder="Your address" />
+                </label>
               </div>
             </div>
           </div>
@@ -737,6 +739,7 @@
         document.getElementById('editName').value = data.name || '';
         document.getElementById('editServiceType').value = (data.serviceType || 'painter');
         document.getElementById('editExperience').value = (data.experience || '5').toString().replace('+','');
+        document.getElementById('editDaily').value = data.dailyRate || '';
         document.getElementById('editHourly').value = data.hourlyRate || '';
         document.getElementById('editAddress').value = data.address || '';
         if (data.profileImage) previewImg.src = data.profileImage;
@@ -763,6 +766,7 @@
         const name = (document.getElementById('editName').value || '').trim();
         const serviceType = document.getElementById('editServiceType').value;
         const experience = document.getElementById('editExperience').value;
+        const dailyRate = Number(document.getElementById('editDaily').value || 0);
         const hourlyRate = Number(document.getElementById('editHourly').value || 0);
         const address = (document.getElementById('editAddress').value || '').trim();
 
@@ -770,6 +774,7 @@
           name,
           serviceType,
           experience,
+          dailyRate,
           hourlyRate,
           address,
           updatedAt: new Date()
