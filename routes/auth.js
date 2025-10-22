@@ -461,4 +461,72 @@ router.post('/verify', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/confirm
+ * Confirm user signup with verification code (alias for /verify)
+ * 
+ * Request Body:
+ * {
+ *   email: string,
+ *   verificationCode: string
+ * }
+ */
+router.post('/confirm', async (req, res) => {
+  try {
+    const { email, verificationCode } = req.body;
+
+    if (!email || !verificationCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing fields',
+        message: 'Email and verification code are required'
+      });
+    }
+
+    console.log('✉️ Confirming signup for email:', email);
+
+    const params = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email,
+      ConfirmationCode: verificationCode
+    };
+
+    await cognito.confirmSignUp(params).promise();
+
+    console.log('✅ Email confirmed successfully');
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully. You can now login.'
+    });
+
+  } catch (error) {
+    console.error('❌ Confirmation error:', error);
+
+    let errorMessage = 'Failed to confirm email';
+    let statusCode = 500;
+
+    if (error.code === 'CodeMismatchException') {
+      errorMessage = 'Invalid verification code. Please check the code and try again.';
+      statusCode = 400;
+    } else if (error.code === 'ExpiredCodeException') {
+      errorMessage = 'Verification code has expired. Please request a new code.';
+      statusCode = 400;
+    } else if (error.code === 'NotAuthorizedException') {
+      errorMessage = 'User is already confirmed.';
+      statusCode = 400;
+    } else if (error.code === 'UserNotFoundException') {
+      errorMessage = 'User not found.';
+      statusCode = 404;
+    }
+
+    res.status(statusCode).json({
+      success: false,
+      error: error.code || 'ConfirmationError',
+      message: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;
