@@ -194,19 +194,18 @@
           localStorage.setItem('refreshToken', data.tokens.refreshToken);
           localStorage.setItem('userData', JSON.stringify(data.user));
           
-          const role = data.user.role || 'seeker';
-
-          // Show success message briefly
-          loginButton.textContent = 'Welcome!';
-          loginButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+          // FORCE IMMEDIATE REDIRECT - No delays, no UI updates
+          const role = data.user.role;
+          console.log('🎯 Forcing redirect for role:', role);
           
-          setTimeout(() => {
-            if (role === 'provider') {
-              window.location.href = 'provider-dashboard.html';
-            } else {
-              window.location.href = 'owner-dashboard.html';
-            }
-          }, 1000);
+          if (role === 'owner') {
+            window.location.href = 'owner-dashboard.html';
+          } else if (role === 'provider') {
+            window.location.href = 'provider-dashboard.html';
+          } else {
+            // Fallback for any other role (seeker, etc.)
+            window.location.href = 'owner-dashboard.html';
+          }
         }
         // CRITICAL: Check for USER_NOT_CONFIRMED error code
         else if (data.code === 'USER_NOT_CONFIRMED' || 
@@ -406,27 +405,21 @@
                 // Clear temporary password
                 sessionStorage.removeItem('temp_login_password');
                 
-                // STEP 3: Role-Based Redirect
-                const userRole = loginData.user.role;
-                console.log('🎯 Role-based redirect for role:', userRole);
+                // FORCE IMMEDIATE REDIRECT - No delays, no async code
+                const role = loginData.user.role;
+                console.log('🎯 Forcing redirect for role:', role);
                 
-                // Show brief success message
-                confirmBtn.innerHTML = '✅ Redirecting...';
-                
-                // Redirect based on role
-                setTimeout(() => {
-                  if (userRole === 'provider') {
-                    console.log('➡️ Redirecting to provider-dashboard.html');
-                    window.location.href = 'provider-dashboard.html';
-                  } else if (userRole === 'seeker' || userRole === 'owner') {
-                    console.log('➡️ Redirecting to owner-dashboard.html');
-                    window.location.href = 'owner-dashboard.html';
-                  } else {
-                    // Fallback for any other role
-                    console.log('➡️ Redirecting to default dashboard (owner-dashboard.html)');
-                    window.location.href = 'owner-dashboard.html';
-                  }
-                }, 1000);
+                if (role === 'owner') {
+                  console.log('➡️ Redirecting to owner-dashboard.html');
+                  window.location.href = 'owner-dashboard.html';
+                } else if (role === 'provider') {
+                  console.log('➡️ Redirecting to provider-dashboard.html');
+                  window.location.href = 'provider-dashboard.html';
+                } else {
+                  // Fallback for any other role (seeker, etc.)
+                  console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
+                  window.location.href = 'owner-dashboard.html';
+                }
                 
               } else {
                 // Login failed after verification

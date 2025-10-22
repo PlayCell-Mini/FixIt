@@ -91,27 +91,24 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       localStorage.setItem('refreshToken', data.tokens.refreshToken);
       localStorage.setItem('userData', JSON.stringify(data.user));
 
-      // Display tokens and user info
-      outputElement.innerHTML = `
-        <div style='color: green;'>
-          <h3>✅ Login Successful!</h3>
-          <p><strong>User:</strong> ${data.user.email}</p>
-          <p><strong>Role:</strong> ${data.user.role}</p>
-          <hr>
-          <p><strong>Access Token:</strong></p>
-          <code style='display: block; background: #f0f0f0; padding: 10px; word-break: break-all; font-size: 12px;'>
-            ${data.tokens.accessToken.substring(0, 50)}...
-          </code>
-          <p><strong>ID Token:</strong></p>
-          <code style='display: block; background: #f0f0f0; padding: 10px; word-break: break-all; font-size: 12px;'>
-            ${data.tokens.idToken.substring(0, 50)}...
-          </code>
-          <p style='margin-top: 15px;'><em>Tokens saved to localStorage</em></p>
-          <p><em>AWS Credentials received and ready for use</em></p>
-        </div>
-      `;
       console.log('Login successful:', data);
       console.log('AWS Credentials:', data.awsCredentials);
+      
+      // FORCE IMMEDIATE REDIRECT - No UI rendering, no delays
+      const role = data.user.role;
+      console.log('🎯 Forcing redirect for role:', role);
+      
+      if (role === 'owner') {
+        console.log('➡️ Redirecting to owner-dashboard.html');
+        window.location.href = 'owner-dashboard.html';
+      } else if (role === 'provider') {
+        console.log('➡️ Redirecting to provider-dashboard.html');
+        window.location.href = 'provider-dashboard.html';
+      } else {
+        // Fallback for any other role (seeker, etc.)
+        console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
+        window.location.href = 'owner-dashboard.html';
+      }
     } 
     // CRUCIAL LOGIC: Check specifically for USER_NOT_CONFIRMED error code
     else if (data.code === 'USER_NOT_CONFIRMED' || 
@@ -340,27 +337,21 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
             // Clear temporary password from sessionStorage
             sessionStorage.removeItem('temp_password');
             
-            // STEP 3: Role-Based Redirect
-            const userRole = loginData.user.role;
-            console.log('🎯 Role-based redirect for role:', userRole);
+            // FORCE IMMEDIATE REDIRECT - No delays, no async code
+            const role = loginData.user.role;
+            console.log('🎯 Forcing redirect for role:', role);
             
-            // Show brief success message
-            confirmBtn.innerHTML = '✅ Redirecting...';
-            
-            // Redirect based on role
-            setTimeout(() => {
-              if (userRole === 'provider') {
-                console.log('➡️ Redirecting to provider-dashboard.html');
-                window.location.href = 'provider-dashboard.html';
-              } else if (userRole === 'seeker' || userRole === 'owner') {
-                console.log('➡️ Redirecting to owner-dashboard.html');
-                window.location.href = 'owner-dashboard.html';
-              } else {
-                // Fallback for any other role
-                console.log('➡️ Redirecting to default dashboard (owner-dashboard.html)');
-                window.location.href = 'owner-dashboard.html';
-              }
-            }, 1000);
+            if (role === 'owner') {
+              console.log('➡️ Redirecting to owner-dashboard.html');
+              window.location.href = 'owner-dashboard.html';
+            } else if (role === 'provider') {
+              console.log('➡️ Redirecting to provider-dashboard.html');
+              window.location.href = 'provider-dashboard.html';
+            } else {
+              // Fallback for any other role (seeker, etc.)
+              console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
+              window.location.href = 'owner-dashboard.html';
+            }
             
           } else {
             // Login failed after verification - show error
