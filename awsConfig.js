@@ -472,7 +472,8 @@ class AWSService {
           password,
           fullName: userData.fullName || '',
           role: userData.role || 'seeker',
-          serviceType: userData.serviceType || null
+          serviceType: userData.serviceType || null,
+          address: userData.address || ''
         })
       });
 

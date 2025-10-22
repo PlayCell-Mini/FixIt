@@ -66,6 +66,17 @@
         </div>
         
         <div class="input-group">
+          <label for="address-input" class="input-label">Address</label>
+          <input 
+            type="text" 
+            id="address-input" 
+            class="form-input" 
+            placeholder="Enter your full address" 
+            required 
+          />
+        </div>
+        
+        <div class="input-group">
           <label for="role" class="input-label">I am a:</label>
           <select id="role" class="form-select" required>
             <option value="">Select your role</option>
@@ -106,11 +117,12 @@
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirmPassword');
+    const addressInput = document.getElementById('address-input');
     const roleSelect = document.getElementById('role');
 
     // Add smooth focus effects
     function addFocusEffects() {
-      const inputs = [fullNameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect];
+      const inputs = [fullNameInput, emailInput, passwordInput, confirmPasswordInput, addressInput, roleSelect];
       
       inputs.forEach(input => {
         input.addEventListener('focus', function() {
@@ -252,10 +264,11 @@
       const email = emailInput.value.trim();
       const password = passwordInput.value;
       const confirmPassword = confirmPasswordInput.value;
+      const address = addressInput.value.trim();
       const role = roleSelect.value;
 
       // Basic validation
-      if (!fullName || !email || !password || !confirmPassword || !role) {
+      if (!fullName || !email || !password || !confirmPassword || !address || !role) {
         showError('Please fill in all fields');
         return;
       }
@@ -286,6 +299,12 @@
         return;
       }
 
+      // Address validation
+      if (address.length < 10) {
+        showError('Please enter a complete address (at least 10 characters)');
+        return;
+      }
+
       setLoadingState(true);
 
       try {
@@ -295,6 +314,7 @@
         const signUpResult = await aws.signUp(email, password, {
           fullName: fullName,
           role: role,
+          address: address,
           serviceType: null // Can be added later for providers
         });
 
@@ -349,7 +369,7 @@
     addFocusEffects();
 
     // Add enter key support for better UX
-    [fullNameInput, emailInput, passwordInput, confirmPasswordInput, roleSelect].forEach(input => {
+    [fullNameInput, emailInput, passwordInput, confirmPasswordInput, addressInput, roleSelect].forEach(input => {
       input.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
           signupForm.dispatchEvent(new Event('submit'));
