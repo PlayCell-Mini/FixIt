@@ -69,7 +69,8 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    if (role === 'provider' && !serviceType) {
+    // CRITICAL CHECK: Ensure serviceType is present if user is a provider
+    if (role === 'provider' && (!serviceType || serviceType.trim() === '')) {
       return res.status(400).json({
         success: false,
         error: 'Missing service type',
@@ -77,7 +78,7 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    console.log('📝 Signing up user:', email, 'Role:', role);
+    console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
 
     // Sign up with Cognito User Pool
     const signUpParams = {
@@ -104,7 +105,8 @@ router.post('/signup', async (req, res) => {
       ]
     };
 
-    if (serviceType) {
+    // Add serviceType attribute for providers
+    if (role === 'provider' && serviceType) {
       signUpParams.UserAttributes.push({
         Name: 'custom:serviceType',
         Value: serviceType
@@ -115,7 +117,7 @@ router.post('/signup', async (req, res) => {
 
     console.log('✅ User signed up successfully with Cognito:', signUpResult.UserSub);
 
-    // Save user data to DynamoDB
+    // Save user data to DynamoDB with proper PK/SK structure
     const userId = signUpResult.UserSub;
     const userData = {
       email: email,
@@ -125,12 +127,14 @@ router.post('/signup', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Add serviceType for providers
+    // CRITICAL: Add serviceType for providers
     if (role === 'provider' && serviceType) {
       userData.serviceType = serviceType;
+      console.log('🔧 Adding serviceType for provider:', serviceType);
     }
 
-    // Save to DynamoDB using the single table approach
+    // Save to DynamoDB using the single table approach with proper PK/SK
+    console.log('💾 Saving user data to DynamoDB:', { userId, userData, role });
     await awsServices.saveUser(userId, userData, role);
 
     console.log('✅ User data saved to DynamoDB successfully');

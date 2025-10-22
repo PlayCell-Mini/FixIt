@@ -41,8 +41,10 @@ class AWSServices {
     const tableName = this.tables.users;
     const pk = userType === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
     
+    // Ensure we have proper partition key and add sort key for single-table design
     const item = {
-      PK: pk,
+      PK: pk,              // Partition Key
+      SK: 'PROFILE#INFO',  // Sort Key - consistent for profile data
       userId: userId,
       userType: userType,
       ...userData,
@@ -60,11 +62,15 @@ class AWSServices {
       Item: item
     };
 
+    // DIAGNOSTIC: Log the exact params being sent to DynamoDB
+    console.log('🔍 DynamoDB Put Params:', JSON.stringify(params, null, 2));
+
     try {
       await this.dynamoDB.put(params).promise();
+      console.log('✅ DynamoDB Put Success');
       return { success: true };
     } catch (error) {
-      console.error('DynamoDB Put Error:', error);
+      console.error('❌ DynamoDB Put Error:', error);
       throw error;
     }
   }
