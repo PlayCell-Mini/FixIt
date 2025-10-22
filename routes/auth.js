@@ -80,25 +80,42 @@ router.post('/signup', async (req, res) => {
 
     console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
 
-    // Sign up with Cognito User Pool - only use standard attributes initially
+    // Sign up with Cognito User Pool - include both standard and custom attributes
+    const userAttributes = [
+      {
+        Name: 'email',
+        Value: email
+      },
+      {
+        Name: 'name',
+        Value: fullName
+      },
+      {
+        Name: 'address',
+        Value: address
+      }
+    ];
+
+    // Add custom attributes
+    if (role) {
+      userAttributes.push({
+        Name: 'custom:role',
+        Value: role
+      });
+    }
+
+    if (role === 'provider' && serviceType) {
+      userAttributes.push({
+        Name: 'custom:serviceType',
+        Value: serviceType
+      });
+    }
+
     const signUpParams = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
       Password: password,
-      UserAttributes: [
-        {
-          Name: 'email',
-          Value: email
-        },
-        {
-          Name: 'name',
-          Value: fullName
-        },
-        {
-          Name: 'address',
-          Value: address
-        }
-      ]
+      UserAttributes: userAttributes
     };
 
     console.log('🔐 Cognito SignUp Params (standard attributes only):', JSON.stringify(signUpParams, null, 2));
@@ -120,35 +137,6 @@ router.post('/signup', async (req, res) => {
     }
 
     console.log('✅ User signed up successfully with Cognito:', userId);
-
-    // After successful signup, update the user with custom attributes
-    // This approach avoids schema validation issues
-    if (role || serviceType) {
-      try {
-        const updateAttributes = [];
-        if (role) {
-          updateAttributes.push({
-            Name: 'custom:role',
-            Value: role
-          });
-        }
-        if (role === 'provider' && serviceType) {
-          updateAttributes.push({
-            Name: 'custom:serviceType',
-            Value: serviceType
-          });
-        }
-
-        if (updateAttributes.length > 0) {
-          console.log('🔄 Updating user with custom attributes:', updateAttributes);
-          // Note: We might need to confirm the user first or use adminUpdateUserAttributes
-          // For now, we'll proceed with DynamoDB storage which is our primary data store
-        }
-      } catch (updateError) {
-        console.warn('⚠️ Warning: Could not update custom attributes in Cognito:', updateError.message);
-        // Continue with DynamoDB storage even if Cognito update fails
-      }
-    }
 
     // Save user data to DynamoDB with proper PK/SK structure
     const userData = {
@@ -185,12 +173,22 @@ router.post('/signup', async (req, res) => {
     console.error('SERVER CRASH ON SIGNUP:', error);
     // CRITICAL: Ensure headers are not sent twice, but respond with JSON.
     if (!res.headersSent) {
-        return res.status(500).json({
-            success: false,
-            code: 'DYNAMO_SAVE_FAILED',  // FIXED: Use correct error code as per project requirements
-            message: 'Internal Server Error during data processing. Please check DynamoDB connection.',
-            details: error.code || error.message
+      // Handle specific Cognito errors
+      if (error.code === 'InvalidParameterException' && error.message.includes('custom:')) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_CUSTOM_ATTRIBUTES',
+          message: 'Custom attributes are not properly configured in Cognito User Pool. Please contact administrator.',
+          details: error.message
         });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        code: 'SIGNUP_FAILED',
+        message: 'Failed to register user. Please try again.',
+        details: error.code || error.message
+      });
     }
   }
 });
