@@ -61,6 +61,46 @@
   <script src="awsConfig.js"></script>
   <script src="apiClient.js"></script>
 
+  <!-- CRITICAL: Global Auth Check - Immediate Redirect if Already Logged In -->
+  <script>
+    (function() {
+      // STEP 1: Check for existing authentication tokens
+      const accessToken = localStorage.getItem('accessToken');
+      const idToken = localStorage.getItem('idToken');
+      const userDataStr = localStorage.getItem('userData');
+      
+      // STEP 2: If tokens exist, redirect immediately based on role
+      if (accessToken && idToken && userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr);
+          const role = userData.role;
+          
+          console.log('🔐 User already authenticated! Role:', role);
+          console.log('➡️ Redirecting to dashboard...');
+          
+          // STEP 3: Immediate role-based redirect
+          if (role === 'owner') {
+            window.location.replace('owner-dashboard.html');
+          } else if (role === 'provider') {
+            window.location.replace('provider-dashboard.html');
+          } else {
+            // Fallback for seeker or any other role
+            window.location.replace('owner-dashboard.html');
+          }
+          
+          // Stop execution of rest of script
+          throw new Error('Redirecting...');
+        } catch (e) {
+          // If redirect failed or userData is corrupt, continue to login page
+          if (e.message !== 'Redirecting...') {
+            console.error('Auth check error:', e);
+            localStorage.clear(); // Clear corrupt data
+          }
+        }
+      }
+    })();
+  </script>
+
   <script>
     const aws = awsService;
     const api = apiClient;

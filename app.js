@@ -1,4 +1,49 @@
 // Signup Button Handler
+// ==================== GLOBAL AUTH CHECK ====================
+// CRITICAL: Redirect authenticated users immediately before any other code runs
+(function() {
+  // Check if we're on a page that requires auth redirect
+  const currentPage = window.location.pathname.split('/').pop();
+  const publicPages = ['login.html', 'signup.html', 'index.html', ''];
+  
+  // Only run on public pages (index.html)
+  if (publicPages.includes(currentPage)) {
+    const accessToken = localStorage.getItem('accessToken');
+    const idToken = localStorage.getItem('idToken');
+    const userDataStr = localStorage.getItem('userData');
+    
+    if (accessToken && idToken && userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        const role = userData.role;
+        
+        console.log('🔐 User already authenticated! Role:', role);
+        console.log('➡️ Redirecting to dashboard...');
+        
+        // Immediate role-based redirect using replace() to prevent back button loop
+        if (role === 'owner') {
+          window.location.replace('owner-dashboard.html');
+        } else if (role === 'provider') {
+          window.location.replace('provider-dashboard.html');
+        } else {
+          // Fallback for seeker or any other role
+          window.location.replace('owner-dashboard.html');
+        }
+        
+        // Stop execution
+        throw new Error('Redirecting...');
+      } catch (e) {
+        if (e.message !== 'Redirecting...') {
+          console.error('Auth check error:', e);
+          localStorage.clear();
+        }
+      }
+    }
+  }
+})();
+
+// ==================== LOGIN FORM HANDLER ====================
+
 document.getElementById("signup-btn").addEventListener("click", async () => {
   const email = document.getElementById("email-input").value.trim();
   const password = document.getElementById("password-input").value;
