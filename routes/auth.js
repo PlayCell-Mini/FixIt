@@ -141,6 +141,7 @@ router.post('/signup', async (req, res) => {
       statusCode = 400;
     }
 
+    // Ensure consistent JSON response even in case of errors
     res.status(statusCode).json({
       success: false,
       error: error.code || 'SignupError',

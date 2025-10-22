@@ -86,15 +86,15 @@ router.get('/profile/details', async (req, res) => {
     
     console.log(`📋 Fetching profile for user: ${userId}, role: ${role}`);
 
-    // Determine table name based on role
-    const tableName = role === 'provider' ? process.env.DYNAMODB_PROVIDERS_TABLE : process.env.DYNAMODB_USERS_TABLE;
-    const tableKey = role === 'provider' ? 'providerId' : 'userId';
+    // Use single table with partition key approach
+    const tableName = process.env.DYNAMODB_USERS_TABLE || 'FixIt';
+    const pk = role === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
 
     // Get user data from DynamoDB
     const params = {
       TableName: tableName,
       Key: {
-        [tableKey]: userId
+        PK: pk
       }
     };
 
@@ -126,6 +126,7 @@ router.get('/profile/details', async (req, res) => {
       });
     }
     
+    // Ensure consistent JSON response even in case of errors
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -189,17 +190,21 @@ router.post('/profile/update', async (req, res) => {
       });
     }
 
-    // Determine table name and key based on role
-    const tableName = role === 'provider' ? process.env.DYNAMODB_PROVIDERS_TABLE : process.env.DYNAMODB_USERS_TABLE;
-    const tableKey = role === 'provider' ? 'providerId' : 'userId';
+    // Use single table with partition key approach
+    const tableName = process.env.DYNAMODB_USERS_TABLE || 'FixIt';
+    const pk = role === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
 
     // Build update expression
-    const updateExpressions = [];
-    const expressionAttributeNames = {};
-    const expressionAttributeValues = {};
+    const updateExpressions = ['SET updatedAt = :updatedAt'];
+    const expressionAttributeNames = {
+      '#updatedAt': 'updatedAt'
+    };
+    const expressionAttributeValues = {
+      ':updatedAt': new Date().toISOString()
+    };
 
     // Always update these fields
-    const fieldsToUpdate = ['fullName', 'address', 'profileURL', 'updatedAt'];
+    const fieldsToUpdate = ['fullName', 'address', 'profileURL'];
     
     // Add provider-specific fields if role is provider
     if (role === 'provider') {
@@ -216,19 +221,13 @@ router.post('/profile/update', async (req, res) => {
       }
     });
 
-    // Always set updatedAt
-    const updatedAtIndex = fieldsToUpdate.length;
-    updateExpressions.push(`#field${updatedAtIndex} = :value${updatedAtIndex}`);
-    expressionAttributeNames[`#field${updatedAtIndex}`] = 'updatedAt';
-    expressionAttributeValues[`:value${updatedAtIndex}`] = new Date().toISOString();
-
     // Update user data in DynamoDB
     const params = {
       TableName: tableName,
       Key: {
-        [tableKey]: userId
+        PK: pk
       },
-      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+      UpdateExpression: updateExpressions.join(', '),
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'UPDATED_NEW'
@@ -254,6 +253,7 @@ router.post('/profile/update', async (req, res) => {
       });
     }
     
+    // Ensure consistent JSON response even in case of errors
     res.status(500).json({
       success: false,
       error: 'Internal server error',

@@ -9,10 +9,10 @@ class AWSServices {
     this.s3 = s3;
     this.cognito = cognito;
     this.tables = {
-      users: process.env.DYNAMODB_USERS_TABLE || 'FixIt-Users',
-      providers: process.env.DYNAMODB_PROVIDERS_TABLE || 'FixIt-Providers',
-      jobs: process.env.DYNAMODB_JOBS_TABLE || 'FixIt-Jobs',
-      marketplaceUsers: process.env.DYNAMODB_MARKETPLACE_USERS_TABLE || 'MarketplaceUsers'
+      users: process.env.DYNAMODB_USERS_TABLE || 'FixIt',
+      providers: process.env.DYNAMODB_PROVIDERS_TABLE || 'FixIt',
+      jobs: process.env.DYNAMODB_JOBS_TABLE || 'FixIt',
+      marketplaceUsers: process.env.DYNAMODB_MARKETPLACE_USERS_TABLE || 'FixIt'
     };
     this.s3Bucket = process.env.S3_BUCKET || 'fixit-profile-images';
   }
@@ -20,11 +20,12 @@ class AWSServices {
   // ==================== DYNAMODB OPERATIONS ====================
 
   async getUser(userId, userType = 'user') {
-    const tableName = userType === 'provider' ? this.tables.providers : this.tables.users;
+    const tableName = this.tables.users;
+    const pk = userType === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
     
     const params = {
       TableName: tableName,
-      Key: { userId }
+      Key: { PK: pk }
     };
 
     try {
@@ -37,15 +38,26 @@ class AWSServices {
   }
 
   async saveUser(userId, userData, userType = 'user') {
-    const tableName = userType === 'provider' ? this.tables.providers : this.tables.users;
+    const tableName = this.tables.users;
+    const pk = userType === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
     
+    const item = {
+      PK: pk,
+      userId: userId,
+      userType: userType,
+      ...userData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // For providers, ensure we have the right structure
+    if (userType === 'provider') {
+      item.providerId = userId;
+    }
+
     const params = {
       TableName: tableName,
-      Item: {
-        userId,
-        ...userData,
-        updatedAt: new Date().toISOString()
-      }
+      Item: item
     };
 
     try {
@@ -58,12 +70,15 @@ class AWSServices {
   }
 
   async updateUser(userId, updates, userType = 'user') {
-    const tableName = userType === 'provider' ? this.tables.providers : this.tables.users;
+    const tableName = this.tables.users;
+    const pk = userType === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
     
     // Build update expression
-    const updateExpressions = [];
+    const updateExpressions = ['SET updatedAt = :updatedAt'];
     const expressionAttributeNames = {};
-    const expressionAttributeValues = {};
+    const expressionAttributeValues = {
+      ':updatedAt': new Date().toISOString()
+    };
 
     Object.keys(updates).forEach((key, index) => {
       const attrName = `#attr${index}`;
@@ -75,8 +90,8 @@ class AWSServices {
 
     const params = {
       TableName: tableName,
-      Key: { userId },
-      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+      Key: { PK: pk },
+      UpdateExpression: updateExpressions.join(', '),
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'ALL_NEW'
@@ -175,7 +190,9 @@ class AWSServices {
   async createServiceRequest(requestData) {
     const { workerId, customerId, serviceType, description } = requestData;
     
+    // Use the single table with a different PK pattern for service requests
     const item = {
+      PK: `REQUEST#${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       requestId: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       workerId,
       customerId,
@@ -201,9 +218,13 @@ class AWSServices {
   }
 
   async getAllServiceProviders() {
+    // Scan for items with PK starting with PROVIDER#
     const params = {
       TableName: this.tables.marketplaceUsers,
-      FilterExpression: 'attribute_exists(serviceType)'
+      FilterExpression: 'begins_with(PK, :prefix)',
+      ExpressionAttributeValues: {
+        ':prefix': 'PROVIDER#'
+      }
     };
 
     try {

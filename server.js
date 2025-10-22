@@ -130,6 +130,30 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).send('Server Error');
 });
 
+// Add a final catch-all error handler for any unhandled errors
+app.use((err, req, res, next) => {
+  // Ensure we always return JSON for API routes
+  if (req.originalUrl.startsWith('/api')) {
+    console.error('🚨 Unhandled error in API route:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal Server Error during data save.',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
+    });
+  }
+  
+  // For non-API routes, fallback to HTML error page
+  res.status(500).send(`
+    <html>
+      <body>
+        <h1>500 - Server Error</h1>
+        <p>An unexpected error occurred.</p>
+        ${process.env.NODE_ENV === 'development' ? `<pre>${err.message}</pre>` : ''}
+      </body>
+    </html>
+  `);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('\n' + '='.repeat(50));
