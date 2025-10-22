@@ -81,7 +81,16 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
       })
     });
 
-    const data = await response.json();
+    // New safer response reading logic
+    const contentType = response.headers.get('content-type');
+    let data = {};
+    if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+    } else {
+        // If server sends HTML/text, we catch the error here.
+        const errorText = await response.text();
+        throw new Error('Server sent invalid response format (HTML). Status: ' + response.status + ' - Check Server Logs.');
+    }
 
     if (response.ok && data.success) {
       // Success - show verification message
@@ -127,7 +136,16 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       })
     });
 
-    const data = await response.json();
+    // New safer response reading logic
+    const contentType = response.headers.get('content-type');
+    let data = {};
+    if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+    } else {
+        // If server sends HTML/text, we catch the error here.
+        const errorText = await response.text();
+        throw new Error('Server sent invalid response format (HTML). Status: ' + response.status + ' - Check Server Logs.');
+    }
 
     if (response.ok && data.success) {
       // Success - save tokens to localStorage
@@ -350,7 +368,16 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
       })
     });
 
-    const data = await response.json();
+    // New safer response reading logic
+    const contentType = response.headers.get('content-type');
+    let data = {};
+    if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+    } else {
+        // If server sends HTML/text, we catch the error here.
+        const errorText = await response.text();
+        throw new Error('Server sent invalid response format (HTML). Status: ' + response.status + ' - Check Server Logs.');
+    }
 
     if (response.ok && data.success) {
       console.log('✅ Email verified successfully:', data);
@@ -373,7 +400,16 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
             })
           });
 
-          const loginData = await loginResponse.json();
+          // New safer response reading logic for login response
+          const loginContentType = loginResponse.headers.get('content-type');
+          let loginData = {};
+          if (loginContentType && loginContentType.includes('application/json')) {
+              loginData = await loginResponse.json();
+          } else {
+              // If server sends HTML/text, we catch the error here.
+              const errorText = await loginResponse.text();
+              throw new Error('Server sent invalid response format (HTML). Status: ' + loginResponse.status + ' - Check Server Logs.');
+          }
 
           if (loginResponse.ok && loginData.success) {
             console.log('✅ Auto-login successful!');
