@@ -240,30 +240,87 @@
         }
       }
 
-      async checkAuthState() {
-        // Check AWS Cognito authentication
-        const currentUser = aws.getCurrentUser();
+      // CRITICAL: Robust session validation to prevent redirect loops
+      checkUserSession() {
+        console.log('🔍 [Owner Dashboard] Checking user session...');
         
-        if (!currentUser) {
-          window.location.href = "login.html";
-          return;
+        // STEP 1: Read tokens directly from localStorage
+        const accessToken = localStorage.getItem('accessToken');
+        const idToken = localStorage.getItem('idToken');
+        const userDataStr = localStorage.getItem('userData');
+        
+        // STEP 2: Validate tokens exist
+        if (!accessToken || !idToken || !userDataStr) {
+          console.error('❌ No valid session found - redirecting to login');
+          window.location.replace('login.html');
+          return false;
         }
         
+        // STEP 3: Parse and validate userData
+        let userData;
         try {
-          // Get user data from DynamoDB
-          const userData = await aws.getUserProfile(currentUser.userId, 'user');
-          
-          if (!userData || userData.role !== 'seeker') {
-            alert('Access denied!');
-            aws.signOut();
-            window.location.href = "login.html";
-            return;
+          userData = JSON.parse(userDataStr);
+        } catch (error) {
+          console.error('❌ Invalid userData in localStorage:', error);
+          localStorage.clear();
+          window.location.replace('login.html');
+          return false;
+        }
+        
+        // STEP 4: Validate user role (owner or seeker allowed)
+        const role = userData.role;
+        if (role !== 'owner' && role !== 'seeker') {
+          console.error('❌ Access denied! Invalid role:', role);
+          alert('Access denied! This dashboard is for service owners only.');
+          localStorage.clear();
+          window.location.replace('login.html');
+          return false;
+        }
+        
+        // STEP 5: Basic token expiry check (optional but recommended)
+        // JWT tokens have 3 parts: header.payload.signature
+        try {
+          const tokenParts = idToken.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            const expiry = payload.exp * 1000; // Convert to milliseconds
+            const now = Date.now();
+            
+            if (expiry < now) {
+              console.error('❌ Token expired - redirecting to login');
+              localStorage.clear();
+              window.location.replace('login.html');
+              return false;
+            }
+            
+            console.log('✅ Token valid until:', new Date(expiry).toLocaleString());
           }
-          
+        } catch (error) {
+          console.warn('⚠️ Could not validate token expiry:', error);
+          // Continue anyway - token might still be valid
+        }
+        
+        console.log('✅ Session valid! User:', userData.email, 'Role:', role);
+        return true;
+      }
+
+      async checkAuthState() {
+        // Use the new robust session check
+        const sessionValid = this.checkUserSession();
+        
+        if (!sessionValid) {
+          return; // Already redirected to login
+        }
+        
+        // Get current user from localStorage (we know it exists now)
+        const currentUser = aws.getCurrentUser();
+        
+        try {
+          // Load user profile from DynamoDB
           this.loadUserProfile(currentUser);
         } catch (error) {
-          console.error('Error checking auth state:', error);
-          window.location.href = "login.html";
+          console.error('Error loading profile:', error);
+          // Don't redirect - profile loading can fail but session is still valid
         }
       }
 
