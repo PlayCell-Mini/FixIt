@@ -70,9 +70,6 @@ app.use('/api', uploadRoutes);
 app.use('/api', profileRoutes);
 app.use('/api/auth', authRoutes);
 
-// Add direct auth routes for frontend compatibility
-app.use('/api', authRoutes); // This makes /api/login and /api/signup work directly
-
 // Serve index.html on root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
