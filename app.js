@@ -123,11 +123,18 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       console.log('User not confirmed - displaying verification form');
       console.log('Error details:', data);
       
-      // Replace main output area's HTML with verification form
-      outputElement.innerHTML = displayVerificationForm(email);
-      
-      // Setup event listeners for verification form
-      setupVerificationFormListeners(email, outputElement);
+      // FORCE UI REPLACEMENT - Target auth-container or fallback to outputElement
+      const authContainer = document.getElementById('auth-container');
+      if (authContainer) {
+        authContainer.innerHTML = displayVerificationForm(email);
+        setupVerificationFormListeners(email, authContainer);
+        console.log('✅ Verification form injected into auth-container');
+      } else {
+        // Fallback to outputElement
+        outputElement.innerHTML = displayVerificationForm(email);
+        setupVerificationFormListeners(email, outputElement);
+        console.log('✅ Verification form injected into outputElement');
+      }
     } 
     else {
       // Other error response from server
