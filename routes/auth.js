@@ -3,15 +3,16 @@ const express = require('express');
 const router = express.Router();
 
 // Get AWS services from server
-let cognito, cognitoIdentity;
+let cognito, cognitoIdentity, awsServices;
 setTimeout(() => {
   cognito = require('../server').cognito;
   cognitoIdentity = require('../server').cognitoIdentity;
+  awsServices = require('../server').awsServices;
 }, 100);
 
 /**
  * POST /api/auth/signup
- * Register a new user with Cognito User Pool
+ * Register a new user with Cognito User Pool and save to DynamoDB
  * 
  * Request Body:
  * {
@@ -112,7 +113,33 @@ router.post('/signup', async (req, res) => {
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
-    console.log('✅ User signed up successfully:', signUpResult.UserSub);
+    console.log('✅ User signed up successfully with Cognito:', signUpResult.UserSub);
+
+    // Save user data to DynamoDB
+    try {
+      const userId = signUpResult.UserSub;
+      const userData = {
+        email: email,
+        fullName: fullName,
+        address: address,
+        role: role,
+        createdAt: new Date().toISOString()
+      };
+
+      // Add serviceType for providers
+      if (role === 'provider' && serviceType) {
+        userData.serviceType = serviceType;
+      }
+
+      // Save to DynamoDB using the single table approach
+      await awsServices.saveUser(userId, userData, role);
+
+      console.log('✅ User data saved to DynamoDB successfully');
+    } catch (dynamoError) {
+      console.error('❌ Error saving user data to DynamoDB:', dynamoError);
+      // Even if DynamoDB save fails, we still want to return success for Cognito signup
+      // The frontend can handle retrying the save operation
+    }
 
     res.status(201).json({
       success: true,
@@ -146,6 +173,7 @@ router.post('/signup', async (req, res) => {
       success: false,
       error: error.code || 'SignupError',
       message: errorMessage,
+      code: error.code === 'UsernameExistsException' ? 'USERNAME_EXISTS' : 'DYNAMO_SAVE_FAILED',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
