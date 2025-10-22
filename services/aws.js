@@ -4,10 +4,11 @@
 const AWS = require('aws-sdk');
 
 class AWSServices {
-  constructor(dynamoDB, s3, cognito) {
+  constructor(dynamoDB, s3, cognito, cognitoIdentity) {
     this.dynamoDB = dynamoDB;
     this.s3 = s3;
     this.cognito = cognito;
+    this.cognitoIdentity = cognitoIdentity;
     this.tables = {
       users: process.env.DYNAMODB_USERS_TABLE || 'FixIt',
       providers: process.env.DYNAMODB_PROVIDERS_TABLE || 'FixIt',

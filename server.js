@@ -41,7 +41,7 @@ const cognito = new AWS.CognitoIdentityServiceProvider();
 const cognitoIdentity = new AWS.CognitoIdentity();
 
 // Initialize AWS service helper
-const awsServices = new AWSServices(dynamoDB, s3, cognito);
+const awsServices = new AWSServices(dynamoDB, s3, cognito, cognitoIdentity);
 
 console.log('✅ AWS SDK initialized successfully');
 console.log('📍 Region:', process.env.AWS_REGION);

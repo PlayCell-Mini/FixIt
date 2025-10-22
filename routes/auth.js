@@ -97,13 +97,17 @@ router.post('/signup', async (req, res) => {
         {
           Name: 'address',
           Value: address
-        },
-        {
-          Name: 'custom:role',
-          Value: role
         }
       ]
     };
+
+    // Add custom attributes separately to avoid schema issues
+    if (role) {
+      signUpParams.UserAttributes.push({
+        Name: 'custom:role',
+        Value: role
+      });
+    }
 
     // Add serviceType attribute for providers
     if (role === 'provider' && serviceType) {
@@ -112,6 +116,8 @@ router.post('/signup', async (req, res) => {
         Value: serviceType
       });
     }
+
+    console.log('🔐 Cognito SignUp Params:', JSON.stringify(signUpParams, null, 2));
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
