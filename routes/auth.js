@@ -138,6 +138,12 @@ router.post('/signup', async (req, res) => {
 
     // Save user data to DynamoDB with proper PK/SK structure
     const userId = signUpResult.UserSub;
+    
+    // CRITICAL CHECK: Ensure userId is valid
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid userId: Cognito signup returned empty userId');
+    }
+    
     const userData = {
       email: email,
       fullName: fullName,

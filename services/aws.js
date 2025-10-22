@@ -39,8 +39,18 @@ class AWSServices {
   }
 
   async saveUser(userId, userData, userType = 'user') {
+    // CRITICAL CHECK: Ensure userId is valid
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid userId: userId is required and cannot be empty');
+    }
+
     const tableName = this.tables.users;
     const pk = userType === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
+    
+    // CRITICAL CHECK: Ensure PK is valid
+    if (!pk || pk.trim() === '') {
+      throw new Error('Invalid PK: Partition Key cannot be empty');
+    }
     
     // Ensure we have proper partition key and add sort key for single-table design
     const item = {
@@ -65,6 +75,15 @@ class AWSServices {
 
     // DIAGNOSTIC: Log the exact params being sent to DynamoDB
     console.log('🔍 DynamoDB Put Params:', JSON.stringify(params, null, 2));
+    
+    // CRITICAL CHECK: Validate the item structure before sending to DynamoDB
+    if (!params.Item.PK || params.Item.PK.trim() === '') {
+      throw new Error('Invalid DynamoDB Item: PK is required and cannot be empty');
+    }
+    
+    if (!params.TableName || params.TableName.trim() === '') {
+      throw new Error('Invalid DynamoDB Params: TableName is required and cannot be empty');
+    }
 
     try {
       await this.dynamoDB.put(params).promise();
@@ -72,7 +91,8 @@ class AWSServices {
       return { success: true };
     } catch (error) {
       console.error('❌ DynamoDB Put Error:', error);
-      throw error;
+      // Re-throw the error with more context
+      throw new Error(`DynamoDB Put Failed: ${error.message} - Item: ${JSON.stringify(params.Item)}`);
     }
   }
 
