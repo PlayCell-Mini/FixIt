@@ -135,6 +135,12 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       localStorage.setItem('idToken', data.tokens.idToken);
       localStorage.setItem('refreshToken', data.tokens.refreshToken);
       localStorage.setItem('userData', JSON.stringify(data.user));
+      
+      // Save AWS temporary credentials for S3 and DynamoDB access
+      if (data.awsCredentials) {
+        localStorage.setItem('awsTempCredentials', JSON.stringify(data.awsCredentials));
+        console.log('🔐 AWS temporary credentials saved to localStorage');
+      }
 
       console.log('Login successful:', data);
       console.log('AWS Credentials:', data.awsCredentials);
@@ -378,6 +384,12 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
             localStorage.setItem('idToken', loginData.tokens.idToken);
             localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
             localStorage.setItem('userData', JSON.stringify(loginData.user));
+            
+            // Save AWS temporary credentials for S3 and DynamoDB access
+            if (loginData.awsCredentials) {
+              localStorage.setItem('awsTempCredentials', JSON.stringify(loginData.awsCredentials));
+              console.log('🔐 AWS temporary credentials saved to localStorage');
+            }
             
             // Clear temporary password from sessionStorage
             sessionStorage.removeItem('temp_password');

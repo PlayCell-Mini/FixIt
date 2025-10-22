@@ -234,6 +234,12 @@
           localStorage.setItem('refreshToken', data.tokens.refreshToken);
           localStorage.setItem('userData', JSON.stringify(data.user));
           
+          // Save AWS temporary credentials for S3 and DynamoDB access
+          if (data.awsCredentials) {
+            localStorage.setItem('awsTempCredentials', JSON.stringify(data.awsCredentials));
+            console.log('🔐 AWS temporary credentials saved to localStorage');
+          }
+          
           // FORCE IMMEDIATE REDIRECT - No delays, no UI updates
           const role = data.user.role;
           console.log('🎯 Forcing redirect for role:', role);
@@ -441,6 +447,12 @@
                 localStorage.setItem('idToken', loginData.tokens.idToken);
                 localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
                 localStorage.setItem('userData', JSON.stringify(loginData.user));
+                
+                // Save AWS temporary credentials for S3 and DynamoDB access
+                if (loginData.awsCredentials) {
+                  localStorage.setItem('awsTempCredentials', JSON.stringify(loginData.awsCredentials));
+                  console.log('🔐 AWS temporary credentials saved to localStorage');
+                }
                 
                 // Clear temporary password
                 sessionStorage.removeItem('temp_login_password');
