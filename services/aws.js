@@ -52,6 +52,9 @@ class AWSServices {
       throw new Error('Invalid PK: Partition Key cannot be empty');
     }
     
+    // DIAGNOSTIC: Log the PK construction
+    console.log('🔑 Constructing PK:', { userType, userId, pk });
+    
     // Ensure we have proper partition key and add sort key for single-table design
     const item = {
       PK: pk,              // Partition Key

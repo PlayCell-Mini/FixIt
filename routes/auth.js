@@ -105,7 +105,21 @@ router.post('/signup', async (req, res) => {
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
-    console.log('✅ User signed up successfully with Cognito:', signUpResult.UserSub);
+    // DIAGNOSTIC: Log the entire signUpResult to see what we're getting
+    console.log('🔍 Cognito SignUp Result:', JSON.stringify(signUpResult, null, 2));
+
+    // CRITICAL: Extract the unique user ID from the Cognito response
+    const userId = signUpResult.UserSub;
+    
+    // DIAGNOSTIC: Log the extracted userId
+    console.log('🔑 Extracted userId from Cognito:', userId);
+
+    // CRITICAL CHECK: Ensure userId is valid and not empty
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid userId: Cognito signup returned empty or missing UserSub');
+    }
+
+    console.log('✅ User signed up successfully with Cognito:', userId);
 
     // After successful signup, update the user with custom attributes
     // This approach avoids schema validation issues
@@ -137,13 +151,6 @@ router.post('/signup', async (req, res) => {
     }
 
     // Save user data to DynamoDB with proper PK/SK structure
-    const userId = signUpResult.UserSub;
-    
-    // CRITICAL CHECK: Ensure userId is valid
-    if (!userId || userId.trim() === '') {
-      throw new Error('Invalid userId: Cognito signup returned empty userId');
-    }
-    
     const userData = {
       email: email,
       fullName: fullName,
@@ -159,7 +166,7 @@ router.post('/signup', async (req, res) => {
     }
 
     // Save to DynamoDB using the single table approach with proper PK/SK
-    console.log('💾 Saving user data to DynamoDB:', { userId, userData, role });
+    console.log('💾 Saving user data to DynamoDB with userId:', userId);
     await awsServices.saveUser(userId, userData, role);
 
     console.log('✅ User data saved to DynamoDB successfully');
@@ -168,7 +175,7 @@ router.post('/signup', async (req, res) => {
       success: true,
       message: 'User registered successfully. Please check your email for verification.',
       data: {
-        userId: signUpResult.UserSub,
+        userId: userId,  // Use the correctly extracted userId
         email: email,
         userConfirmed: signUpResult.UserConfirmed
       }
