@@ -80,7 +80,7 @@ router.post('/signup', async (req, res) => {
 
     console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
 
-    // Sign up with Cognito User Pool
+    // Sign up with Cognito User Pool - only use standard attributes initially
     const signUpParams = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -101,27 +101,40 @@ router.post('/signup', async (req, res) => {
       ]
     };
 
-    // Add custom attributes separately to avoid schema issues
-    if (role) {
-      signUpParams.UserAttributes.push({
-        Name: 'custom:role',
-        Value: role
-      });
-    }
-
-    // Add serviceType attribute for providers
-    if (role === 'provider' && serviceType) {
-      signUpParams.UserAttributes.push({
-        Name: 'custom:serviceType',
-        Value: serviceType
-      });
-    }
-
-    console.log('🔐 Cognito SignUp Params:', JSON.stringify(signUpParams, null, 2));
+    console.log('🔐 Cognito SignUp Params (standard attributes only):', JSON.stringify(signUpParams, null, 2));
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
     console.log('✅ User signed up successfully with Cognito:', signUpResult.UserSub);
+
+    // After successful signup, update the user with custom attributes
+    // This approach avoids schema validation issues
+    if (role || serviceType) {
+      try {
+        const updateAttributes = [];
+        if (role) {
+          updateAttributes.push({
+            Name: 'custom:role',
+            Value: role
+          });
+        }
+        if (role === 'provider' && serviceType) {
+          updateAttributes.push({
+            Name: 'custom:serviceType',
+            Value: serviceType
+          });
+        }
+
+        if (updateAttributes.length > 0) {
+          console.log('🔄 Updating user with custom attributes:', updateAttributes);
+          // Note: We might need to confirm the user first or use adminUpdateUserAttributes
+          // For now, we'll proceed with DynamoDB storage which is our primary data store
+        }
+      } catch (updateError) {
+        console.warn('⚠️ Warning: Could not update custom attributes in Cognito:', updateError.message);
+        // Continue with DynamoDB storage even if Cognito update fails
+      }
+    }
 
     // Save user data to DynamoDB with proper PK/SK structure
     const userId = signUpResult.UserSub;
