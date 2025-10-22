@@ -118,13 +118,13 @@ app.use((err, req, res, next) => {
   
   // For API routes, always return JSON
   if (req.path.startsWith('/api')) {
-    // Ensure consistent JSON response for all API errors
-    return res.status(err.status || 500).json({
+    // CRITICAL: Unconditional return of 500 status JSON response to prevent HTML error pages
+    return res.status(500).json({
       success: false,
       message: 'Internal Server Error during data processing.',
       code: 'DYNAMO_SAVE_FAILED',
       error: err.name || 'ServerError',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      details: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
   }
   

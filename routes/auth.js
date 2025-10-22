@@ -116,37 +116,24 @@ router.post('/signup', async (req, res) => {
     console.log('✅ User signed up successfully with Cognito:', signUpResult.UserSub);
 
     // Save user data to DynamoDB
-    try {
-      const userId = signUpResult.UserSub;
-      const userData = {
-        email: email,
-        fullName: fullName,
-        address: address,
-        role: role,
-        createdAt: new Date().toISOString()
-      };
+    const userId = signUpResult.UserSub;
+    const userData = {
+      email: email,
+      fullName: fullName,
+      address: address,
+      role: role,
+      createdAt: new Date().toISOString()
+    };
 
-      // Add serviceType for providers
-      if (role === 'provider' && serviceType) {
-        userData.serviceType = serviceType;
-      }
-
-      // Save to DynamoDB using the single table approach
-      await awsServices.saveUser(userId, userData, role);
-
-      console.log('✅ User data saved to DynamoDB successfully');
-    } catch (error) {
-      console.error('SERVER CRASH ON SIGNUP:', error);
-      // CRITICAL: Ensure headers are not sent twice, but respond with JSON.
-      if (!res.headersSent) {
-          return res.status(500).json({
-              success: false,
-              code: 'DYNAMO_CRASH',
-              message: 'Internal Server Error during data processing. Please check DynamoDB connection.',
-              details: error.code
-          });
-      }
+    // Add serviceType for providers
+    if (role === 'provider' && serviceType) {
+      userData.serviceType = serviceType;
     }
+
+    // Save to DynamoDB using the single table approach
+    await awsServices.saveUser(userId, userData, role);
+
+    console.log('✅ User data saved to DynamoDB successfully');
 
     res.status(201).json({
       success: true,
@@ -159,30 +146,16 @@ router.post('/signup', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Signup error:', error);
-    
-    let errorMessage = 'Failed to sign up user';
-    let statusCode = 500;
-
-    if (error.code === 'UsernameExistsException') {
-      errorMessage = 'User with this email already exists';
-      statusCode = 409;
-    } else if (error.code === 'InvalidPasswordException') {
-      errorMessage = 'Password does not meet requirements';
-      statusCode = 400;
-    } else if (error.code === 'InvalidParameterException') {
-      errorMessage = error.message;
-      statusCode = 400;
+    console.error('SERVER CRASH ON SIGNUP:', error);
+    // CRITICAL: Ensure headers are not sent twice, but respond with JSON.
+    if (!res.headersSent) {
+        return res.status(500).json({
+            success: false,
+            code: 'DYNAMO_CRASH',
+            message: 'Internal Server Error during data processing. Please check DynamoDB connection.',
+            details: error.code || error.message
+        });
     }
-
-    // Ensure consistent JSON response even in case of errors
-    res.status(statusCode).json({
-      success: false,
-      error: error.code || 'SignupError',
-      message: errorMessage,
-      code: error.code === 'UsernameExistsException' ? 'USERNAME_EXISTS' : 'DYNAMO_SAVE_FAILED',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
   }
 });
 
