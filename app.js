@@ -119,10 +119,15 @@ document.getElementById("login-btn").addEventListener("click", async () => {
              data.message.includes('UserNotConfirmedException') ||
              data.message.includes('Verification is required') ||
              data.message.includes('verify your email')) {
-      // Dynamic UI Replacement - Seamlessly switch to verification form
+      // Dynamic UI Replacement - Replace login form with verification form
       console.log('User not confirmed - displaying verification form');
       console.log('Error details:', data);
-      replaceWithVerificationForm(email, outputElement);
+      
+      // Replace main output area's HTML with verification form
+      outputElement.innerHTML = displayVerificationForm(email);
+      
+      // Setup event listeners for verification form
+      setupVerificationFormListeners(email, outputElement);
     } 
     else {
       // Other error response from server
@@ -136,10 +141,9 @@ document.getElementById("login-btn").addEventListener("click", async () => {
   }
 });
 
-// Function to replace UI with verification form (seamless transition)
-function replaceWithVerificationForm(email, outputElement) {
-  // Complete HTML structure for verification form
-  outputElement.innerHTML = `
+// Dynamic HTML Function: Returns verification form HTML using template literals
+function displayVerificationForm(email) {
+  return `
     <div style='max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);'>
       <div style='background: white; padding: 30px; border-radius: 8px;'>
         <div style='text-align: center; margin-bottom: 25px;'>
@@ -148,7 +152,7 @@ function replaceWithVerificationForm(email, outputElement) {
           <p style='color: #666; margin: 0; font-size: 14px;'>We sent a 6-digit code to your email</p>
         </div>
 
-        <!-- Hidden field to store email -->
+        <!-- Hidden input for user's email -->
         <input type='hidden' id='stored-email' value='${email}' />
 
         <div style='background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;'>
@@ -194,8 +198,11 @@ function replaceWithVerificationForm(email, outputElement) {
       </div>
     </div>
   `;
+}
 
-  // Attach event listener for the confirm button (after DOM is updated)
+// Setup event listeners for verification form elements
+function setupVerificationFormListeners(email, outputElement) {
+  // Use setTimeout to ensure DOM is updated
   setTimeout(() => {
     const confirmBtn = document.getElementById('confirm-btn-final');
     const codeInput = document.getElementById('confirm-code-input');
@@ -205,15 +212,22 @@ function replaceWithVerificationForm(email, outputElement) {
       // Auto-focus on code input for better UX
       codeInput.focus();
 
-      // Click handler for confirm button
+      // Confirmation Handler: Event listener for #confirm-btn-final button
       confirmBtn.addEventListener('click', async () => {
-        await handleFinalConfirmation(storedEmail.value, codeInput, outputElement);
+        // Get stored email and confirmation code
+        const email = storedEmail.value;
+        const verificationCode = codeInput.value.trim();
+        
+        // Send POST request to /api/auth/confirm
+        await handleConfirmation(email, verificationCode, codeInput, outputElement);
       });
 
       // Enter key handler for quick submission
       codeInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter') {
-          await handleFinalConfirmation(storedEmail.value, codeInput, outputElement);
+          const email = storedEmail.value;
+          const verificationCode = codeInput.value.trim();
+          await handleConfirmation(email, verificationCode, codeInput, outputElement);
         }
       });
 
@@ -234,10 +248,8 @@ function replaceWithVerificationForm(email, outputElement) {
   }, 100);
 }
 
-// Function to handle final email confirmation (from verification form)
-async function handleFinalConfirmation(email, codeInput, outputElement) {
-  const verificationCode = codeInput.value.trim();
-
+// Confirmation Handler: Process verification code submission
+async function handleConfirmation(email, verificationCode, codeInput, outputElement) {
   // Validation
   if (!verificationCode) {
     showInlineError(codeInput, '❌ Please enter the verification code');
@@ -263,9 +275,9 @@ async function handleFinalConfirmation(email, codeInput, outputElement) {
     confirmBtn.style.cursor = 'not-allowed';
     confirmBtn.innerHTML = '⏳ Verifying...';
 
-    console.log('Sending verification code to /api/auth/confirm');
+    console.log('Sending POST to /api/auth/confirm with email:', email);
 
-    // Make POST request to confirm endpoint
+    // Send POST request to /api/auth/confirm backend endpoint
     const response = await fetch('/api/auth/confirm', {
       method: 'POST',
       headers: {
@@ -318,7 +330,7 @@ async function handleFinalConfirmation(email, codeInput, outputElement) {
           }
         </style>
       `;
-      console.log('Email verified successfully:', data);
+      console.log('✅ Email verified successfully:', data);
     } else {
       // Error response from server - show inline error
       confirmBtn.disabled = false;
@@ -327,7 +339,7 @@ async function handleFinalConfirmation(email, codeInput, outputElement) {
       confirmBtn.innerHTML = originalButtonText;
       
       showInlineError(codeInput, `❌ ${data.message || 'Failed to verify email'}`);
-      console.error('Verification error:', data);
+      console.error('❌ Verification error:', data);
     }
   } catch (error) {
     // Network or other error
@@ -340,7 +352,7 @@ async function handleFinalConfirmation(email, codeInput, outputElement) {
     }
     
     showInlineError(codeInput, `❌ ${error.message}`);
-    console.error('Verification error:', error);
+    console.error('❌ Verification error:', error);
   }
 }
 
