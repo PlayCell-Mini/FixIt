@@ -24,7 +24,7 @@ setTimeout(() => {
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password, fullName, role, serviceType } = req.body;
+    const { email, password, fullName, role, serviceType, address } = req.body;
 
     // Validation
     if (!email || !password || !fullName || !role) {
@@ -32,6 +32,15 @@ router.post('/signup', async (req, res) => {
         success: false,
         error: 'Missing required fields',
         message: 'email, password, fullName, and role are required'
+      });
+    }
+
+    // Validate address (required by Cognito User Pool)
+    if (!address || !address.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing address',
+        message: 'Address is required for sign-up'
       });
     }
 
@@ -82,6 +91,10 @@ router.post('/signup', async (req, res) => {
         {
           Name: 'name',
           Value: fullName
+        },
+        {
+          Name: 'address',
+          Value: address
         },
         {
           Name: 'custom:role',

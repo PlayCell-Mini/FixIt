@@ -2,11 +2,18 @@
 document.getElementById("signup-btn").addEventListener("click", async () => {
   const email = document.getElementById("email-input").value.trim();
   const password = document.getElementById("password-input").value;
+  const address = document.getElementById("address-input").value.trim();
   const outputElement = document.getElementById("output");
 
   // Validation
   if (!email || !password) {
     outputElement.innerHTML = "<p style='color: red;'>Please enter both email and password</p>";
+    return;
+  }
+
+  // Validate address is provided (required by Cognito)
+  if (!address) {
+    outputElement.innerHTML = "<p style='color: red;'>⚠️ Please fill in the address before proceeding. Address is required for sign-up.</p>";
     return;
   }
 
@@ -24,7 +31,8 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
         email: email,
         password: password,
         fullName: email.split('@')[0], // Use email username as default name
-        role: 'seeker' // Default role
+        role: 'seeker', // Default role
+        address: address // Include address attribute
       })
     });
 
