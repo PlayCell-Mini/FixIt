@@ -113,12 +113,15 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       console.log('Login successful:', data);
       console.log('AWS Credentials:', data.awsCredentials);
     } 
-    // CRUCIAL LOGIC: Check specifically for UserNotConfirmedException
-    else if (data.error === 'UserNotConfirmedException' || 
+    // CRUCIAL LOGIC: Check specifically for USER_NOT_CONFIRMED error code
+    else if (data.code === 'USER_NOT_CONFIRMED' || 
+             data.error === 'UserNotConfirmedException' || 
              data.message.includes('UserNotConfirmedException') ||
+             data.message.includes('Verification is required') ||
              data.message.includes('verify your email')) {
       // Dynamic UI Replacement - Seamlessly switch to verification form
       console.log('User not confirmed - displaying verification form');
+      console.log('Error details:', data);
       replaceWithVerificationForm(email, outputElement);
     } 
     else {

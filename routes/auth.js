@@ -294,24 +294,38 @@ router.post('/login', async (req, res) => {
     console.error('❌ Login error:', error);
     
     let errorMessage = 'Failed to login';
+    let errorCode = 'LOGIN_ERROR';
     let statusCode = 500;
 
+    // User Not Confirmed Check - Explicit handling
+    if (error.code === 'UserNotConfirmedException') {
+      console.log('⚠️ User not confirmed - returning USER_NOT_CONFIRMED error');
+      return res.status(403).json({
+        success: false,
+        code: 'USER_NOT_CONFIRMED',
+        error: 'UserNotConfirmedException',
+        message: 'Verification is required. Check your email for the code.'
+      });
+    }
+    
+    // Other authentication errors
     if (error.code === 'NotAuthorizedException') {
       errorMessage = 'Incorrect email or password';
+      errorCode = 'INVALID_CREDENTIALS';
       statusCode = 401;
-    } else if (error.code === 'UserNotConfirmedException') {
-      errorMessage = 'Please verify your email before logging in';
-      statusCode = 403;
     } else if (error.code === 'UserNotFoundException') {
       errorMessage = 'User not found';
+      errorCode = 'USER_NOT_FOUND';
       statusCode = 404;
     } else if (error.code === 'InvalidParameterException') {
       errorMessage = error.message;
+      errorCode = 'INVALID_PARAMETER';
       statusCode = 400;
     }
 
     res.status(statusCode).json({
       success: false,
+      code: errorCode,
       error: error.code || 'LoginError',
       message: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -463,21 +477,39 @@ router.post('/verify', async (req, res) => {
 
 /**
  * POST /api/auth/confirm
- * Confirm user signup with verification code (alias for /verify)
+ * Confirm user signup with verification code
+ * 
+ * This endpoint is called by the frontend when a user needs to verify their email.
+ * It uses AWS Cognito's confirmSignUp method to activate the user account.
  * 
  * Request Body:
  * {
- *   email: string,
- *   verificationCode: string
+ *   email: string,           // User's email address
+ *   verificationCode: string  // 6-digit code from email
  * }
+ * 
+ * Success Response (200 OK):
+ * {
+ *   success: true,
+ *   message: 'Email verified successfully. You can now login.'
+ * }
+ * 
+ * Error Responses:
+ * - 400 Bad Request (Missing fields)
+ * - 400 Bad Request (Invalid code - CodeMismatchException)
+ * - 400 Bad Request (Expired code - ExpiredCodeException)
+ * - 400 Bad Request (Already confirmed - NotAuthorizedException)
+ * - 404 Not Found (User not found - UserNotFoundException)
  */
 router.post('/confirm', async (req, res) => {
   try {
     const { email, verificationCode } = req.body;
 
+    // Validation
     if (!email || !verificationCode) {
       return res.status(400).json({
         success: false,
+        code: 'MISSING_FIELDS',
         error: 'Missing fields',
         message: 'Email and verification code are required'
       });
@@ -485,6 +517,7 @@ router.post('/confirm', async (req, res) => {
 
     console.log('✉️ Confirming signup for email:', email);
 
+    // Call Cognito confirmSignUp
     const params = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -493,8 +526,9 @@ router.post('/confirm', async (req, res) => {
 
     await cognito.confirmSignUp(params).promise();
 
-    console.log('✅ Email confirmed successfully');
+    console.log('✅ Email confirmed successfully for:', email);
 
+    // Success response
     res.status(200).json({
       success: true,
       message: 'Email verified successfully. You can now login.'
@@ -504,24 +538,31 @@ router.post('/confirm', async (req, res) => {
     console.error('❌ Confirmation error:', error);
 
     let errorMessage = 'Failed to confirm email';
+    let errorCode = 'CONFIRMATION_ERROR';
     let statusCode = 500;
 
+    // Specific error handling
     if (error.code === 'CodeMismatchException') {
       errorMessage = 'Invalid verification code. Please check the code and try again.';
+      errorCode = 'INVALID_CODE';
       statusCode = 400;
     } else if (error.code === 'ExpiredCodeException') {
       errorMessage = 'Verification code has expired. Please request a new code.';
+      errorCode = 'EXPIRED_CODE';
       statusCode = 400;
     } else if (error.code === 'NotAuthorizedException') {
       errorMessage = 'User is already confirmed.';
+      errorCode = 'ALREADY_CONFIRMED';
       statusCode = 400;
     } else if (error.code === 'UserNotFoundException') {
       errorMessage = 'User not found.';
+      errorCode = 'USER_NOT_FOUND';
       statusCode = 404;
     }
 
     res.status(statusCode).json({
       success: false,
+      code: errorCode,
       error: error.code || 'ConfirmationError',
       message: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
