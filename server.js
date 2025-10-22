@@ -62,10 +62,12 @@ const apiRoutes = require('./routes/api');
 const marketplaceRoutes = require('./routes/marketplace');
 const uploadRoutes = require('./routes/upload');
 const authRoutes = require('./routes/auth');
+const profileRoutes = require('./routes/profile');
 
 app.use('/api', apiRoutes);
 app.use('/api', marketplaceRoutes);
 app.use('/api', uploadRoutes);
+app.use('/api', profileRoutes);
 app.use('/api/auth', authRoutes);
 
 // Add direct auth routes for frontend compatibility
@@ -103,6 +105,8 @@ app.use('/api/*', (req, res) => {
       '/api/hire',
       '/api/services',
       '/api/upload',
+      '/api/profile/details',
+      '/api/profile/update',
       '/health'
     ]
   });

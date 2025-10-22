@@ -818,11 +818,30 @@
 
       // Prefill form when modal is opened
       const initializeProfileForm = async () => {
-        const currentUser = aws.getCurrentUser();
-        if (!currentUser) return;
+        // Get access token from localStorage
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+          dashboard.showNotification('You must be logged in to edit your profile', 'error');
+          return;
+        }
         
         try {
-          const userData = await aws.getUserProfile(currentUser.userId, 'user');
+          console.log('📋 Loading profile data from API...');
+          
+          // Fetch profile data from backend API
+          const response = await fetch('/api/profile/details', {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Failed to load profile data');
+          }
+          
+          const userData = result.data;
           
           if (userData) {
             document.getElementById('editName').value = userData.fullName || '';
@@ -833,8 +852,11 @@
               previewImg.src = userData.profileURL;
             }
           }
+          
+          console.log('✅ Profile data loaded successfully');
         } catch (error) {
-          console.error('Error prefilling form:', error);
+          console.error('Error loading profile data:', error);
+          dashboard.showNotification('Failed to load profile data: ' + error.message, 'error');
         }
       };
       
@@ -927,13 +949,31 @@
             updateData.profileURL = uploadResponse.fileUrl;
           }
 
-          console.log('💾 Saving profile to DynamoDB users table...');
+          console.log('💾 Saving profile to DynamoDB users table via API...');
           
-          // Save data to DynamoDB
-          await aws.updateUserProfile(currentUser.userId, updateData, 'user');
+          // Get access token from localStorage
+          const accessToken = localStorage.getItem('accessToken');
+          if (!accessToken) {
+            throw new Error('Access token not found');
+          }
           
-          console.log('✅ Profile data saved to DynamoDB successfully!');
-          console.log('Saved data:', updateData);
+          // Save data to DynamoDB via backend API
+          const response = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(updateData)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Failed to update profile');
+          }
+          
+          console.log('✅ Profile data saved successfully!');
           
           // UI update after save
           if (updateData.profileURL) {
