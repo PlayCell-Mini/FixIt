@@ -91,6 +91,48 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Enhanced health check endpoint with DynamoDB test
+app.get('/health/dynamodb', async (req, res) => {
+  try {
+    // Test DynamoDB connection with a simple list tables operation
+    const AWS = require('aws-sdk');
+    const dynamoDB = new AWS.DynamoDB({
+      region: process.env.AWS_REGION,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    });
+    
+    // Try to list tables to verify we have permissions
+    const result = await dynamoDB.listTables().promise();
+    
+    // Check if our table is in the list
+    const tableName = process.env.DYNAMODB_USERS_TABLE || 'FixIt';
+    const tableExists = result.TableNames.includes(tableName);
+    
+    res.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      dynamoDB: {
+        status: 'connected',
+        table: tableName,
+        tableExists: tableExists,
+        availableTables: result.TableNames
+      }
+    });
+  } catch (error) {
+    console.error('DynamoDB Health Check Error:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      dynamoDB: {
+        status: 'disconnected',
+        error: error.message,
+        code: error.code
+      }
+    });
+  }
+});
+
 // 404 handler for API routes - return JSON instead of HTML
 app.use('/api/*', (req, res) => {
   res.status(404).json({

@@ -16,6 +16,13 @@ class AWSServices {
       marketplaceUsers: process.env.DYNAMODB_MARKETPLACE_USERS_TABLE || 'FixIt'
     };
     this.s3Bucket = process.env.S3_BUCKET || 'fixit-profile-images';
+    
+    // DIAGNOSTIC: Log AWS configuration
+    console.log('🔧 AWS Services Configuration:', {
+      region: process.env.AWS_REGION,
+      tables: this.tables,
+      s3Bucket: this.s3Bucket
+    });
   }
 
   // ==================== DYNAMODB OPERATIONS ====================
@@ -59,7 +66,8 @@ class AWSServices {
     const item = {
       PK: pk,              // Partition Key
       SK: 'PROFILE#INFO',  // Sort Key - consistent for profile data
-      userId: userId,
+      userId: userId,      // Add userId as a separate field
+      UserID: userId,      // Add UserID to satisfy DynamoDB schema requirements
       userType: userType,
       ...userData,
       createdAt: new Date().toISOString(),
@@ -89,13 +97,23 @@ class AWSServices {
     }
 
     try {
+      console.log('🔄 Attempting DynamoDB Put Operation...');
       await this.dynamoDB.put(params).promise();
       console.log('✅ DynamoDB Put Success');
       return { success: true };
     } catch (error) {
       console.error('❌ DynamoDB Put Error:', error);
+      // More detailed error logging
+      console.error('❌ DynamoDB Put Error Details:', {
+        code: error.code,
+        message: error.message,
+        tableName: params.TableName,
+        itemPK: params.Item.PK,
+        itemSK: params.Item.SK,
+        region: process.env.AWS_REGION
+      });
       // Re-throw the error with more context
-      throw new Error(`DynamoDB Put Failed: ${error.message} - Item: ${JSON.stringify(params.Item)}`);
+      throw new Error(`DynamoDB Put Failed: ${error.code || 'UnknownError'} - ${error.message} - Table: ${params.TableName} - PK: ${params.Item.PK}`);
     }
   }
 

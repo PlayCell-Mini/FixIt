@@ -187,7 +187,7 @@ router.post('/signup', async (req, res) => {
     if (!res.headersSent) {
         return res.status(500).json({
             success: false,
-            code: 'DYNAMO_CRASH',
+            code: 'DYNAMO_SAVE_FAILED',  // FIXED: Use correct error code as per project requirements
             message: 'Internal Server Error during data processing. Please check DynamoDB connection.',
             details: error.code || error.message
         });
