@@ -135,10 +135,17 @@ router.post('/signup', async (req, res) => {
       await awsServices.saveUser(userId, userData, role);
 
       console.log('✅ User data saved to DynamoDB successfully');
-    } catch (dynamoError) {
-      console.error('❌ Error saving user data to DynamoDB:', dynamoError);
-      // Even if DynamoDB save fails, we still want to return success for Cognito signup
-      // The frontend can handle retrying the save operation
+    } catch (error) {
+      console.error('SERVER CRASH ON SIGNUP:', error);
+      // CRITICAL: Ensure headers are not sent twice, but respond with JSON.
+      if (!res.headersSent) {
+          return res.status(500).json({
+              success: false,
+              code: 'DYNAMO_CRASH',
+              message: 'Internal Server Error during data processing. Please check DynamoDB connection.',
+              details: error.code
+          });
+      }
     }
 
     res.status(201).json({
