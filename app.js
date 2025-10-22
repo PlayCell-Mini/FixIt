@@ -123,6 +123,9 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       console.log('User not confirmed - displaying verification form');
       console.log('Error details:', data);
       
+      // Store password temporarily in sessionStorage for auto-login after confirmation
+      sessionStorage.setItem('temp_password', password);
+      
       // FORCE UI REPLACEMENT - Target auth-container or fallback to outputElement
       const authContainer = document.getElementById('auth-container');
       if (authContainer) {
@@ -226,7 +229,9 @@ function setupVerificationFormListeners(email, outputElement) {
         const verificationCode = codeInput.value.trim();
         
         // Send POST request to /api/auth/confirm
-        await handleConfirmation(email, verificationCode, codeInput, outputElement);
+        // Note: Password stored temporarily in sessionStorage for auto-login
+        const tempPassword = sessionStorage.getItem('temp_password');
+        await handleConfirmation(email, verificationCode, codeInput, outputElement, tempPassword);
       });
 
       // Enter key handler for quick submission
@@ -234,7 +239,8 @@ function setupVerificationFormListeners(email, outputElement) {
         if (e.key === 'Enter') {
           const email = storedEmail.value;
           const verificationCode = codeInput.value.trim();
-          await handleConfirmation(email, verificationCode, codeInput, outputElement);
+          const tempPassword = sessionStorage.getItem('temp_password');
+          await handleConfirmation(email, verificationCode, codeInput, outputElement, tempPassword);
         }
       });
 
@@ -256,7 +262,7 @@ function setupVerificationFormListeners(email, outputElement) {
 }
 
 // Confirmation Handler: Process verification code submission
-async function handleConfirmation(email, verificationCode, codeInput, outputElement) {
+async function handleConfirmation(email, verificationCode, codeInput, outputElement, password) {
   // Validation
   if (!verificationCode) {
     showInlineError(codeInput, '❌ Please enter the verification code');
@@ -284,7 +290,7 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
 
     console.log('Sending POST to /api/auth/confirm with email:', email);
 
-    // Send POST request to /api/auth/confirm backend endpoint
+    // STEP 1: Send POST request to /api/auth/confirm backend endpoint
     const response = await fetch('/api/auth/confirm', {
       method: 'POST',
       headers: {
@@ -299,45 +305,130 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
     const data = await response.json();
 
     if (response.ok && data.success) {
-      // Success - show animated success message
-      outputElement.innerHTML = `
-        <div style='max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); animation: slideIn 0.5s ease;'>
-          <div style='background: white; padding: 40px; border-radius: 8px; text-align: center;'>
-            <div style='font-size: 72px; margin-bottom: 20px; animation: bounceIn 0.6s ease;'>✅</div>
-            <h2 style='color: #2d5016; margin: 0 0 15px 0; font-size: 28px; font-weight: 700;'>Email Verified Successfully!</h2>
-            <p style='color: #4a7c2c; margin: 0 0 10px 0; font-size: 16px;'>Your email has been confirmed.</p>
-            <p style='color: #5a8c3c; margin: 0 0 30px 0; font-size: 18px; font-weight: 600;'>You can now log in with your credentials.</p>
-            
-            <div style='background: #f0f8e8; padding: 15px; border-radius: 6px; margin-bottom: 25px;'>
-              <p style='margin: 0; font-size: 14px; color: #4a7c2c;'>
-                <strong>✓ Account Activated:</strong> ${email}
-              </p>
-            </div>
-
-            <button 
-              onclick="location.reload()" 
-              style='width: 100%; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700; box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4); transition: transform 0.2s;'
-              onmouseover="this.style.transform='translateY(-2px)';" 
-              onmouseout="this.style.transform='translateY(0)';"
-            >
-              🔑 Go to Login
-            </button>
-          </div>
-        </div>
-
-        <style>
-          @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes bounceIn {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-          }
-        </style>
-      `;
       console.log('✅ Email verified successfully:', data);
+      
+      // STEP 2: Immediate Login after successful confirmation
+      if (password) {
+        confirmBtn.innerHTML = '🔑 Logging in...';
+        console.log('🔑 Auto-login initiated...');
+        
+        try {
+          // Make POST request to /api/auth/login
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: email,
+              password: password
+            })
+          });
+
+          const loginData = await loginResponse.json();
+
+          if (loginResponse.ok && loginData.success) {
+            console.log('✅ Auto-login successful!');
+            console.log('👤 User data:', loginData.user);
+            
+            // Save tokens to localStorage
+            localStorage.setItem('accessToken', loginData.tokens.accessToken);
+            localStorage.setItem('idToken', loginData.tokens.idToken);
+            localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
+            localStorage.setItem('userData', JSON.stringify(loginData.user));
+            
+            // Clear temporary password from sessionStorage
+            sessionStorage.removeItem('temp_password');
+            
+            // STEP 3: Role-Based Redirect
+            const userRole = loginData.user.role;
+            console.log('🎯 Role-based redirect for role:', userRole);
+            
+            // Show brief success message
+            confirmBtn.innerHTML = '✅ Redirecting...';
+            
+            // Redirect based on role
+            setTimeout(() => {
+              if (userRole === 'provider') {
+                console.log('➡️ Redirecting to provider-dashboard.html');
+                window.location.href = 'provider-dashboard.html';
+              } else if (userRole === 'seeker' || userRole === 'owner') {
+                console.log('➡️ Redirecting to owner-dashboard.html');
+                window.location.href = 'owner-dashboard.html';
+              } else {
+                // Fallback for any other role
+                console.log('➡️ Redirecting to default dashboard (owner-dashboard.html)');
+                window.location.href = 'owner-dashboard.html';
+              }
+            }, 1000);
+            
+          } else {
+            // Login failed after verification - show error
+            console.error('❌ Auto-login failed:', loginData);
+            throw new Error(loginData.message || 'Login failed after verification');
+          }
+        } catch (loginError) {
+          console.error('❌ Auto-login error:', loginError);
+          
+          // Show success message but ask user to login manually
+          outputElement.innerHTML = `
+            <div style='max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);'>
+              <div style='background: white; padding: 40px; border-radius: 8px; text-align: center;'>
+                <div style='font-size: 72px; margin-bottom: 20px;'>✅</div>
+                <h2 style='color: #2d5016; margin: 0 0 15px 0; font-size: 28px; font-weight: 700;'>Email Verified Successfully!</h2>
+                <p style='color: #4a7c2c; margin: 0 0 10px 0; font-size: 16px;'>Your email has been confirmed.</p>
+                <p style='color: #5a8c3c; margin: 0 0 30px 0; font-size: 18px; font-weight: 600;'>Please log in with your credentials.</p>
+                <button 
+                  onclick="location.reload()" 
+                  style='width: 100%; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;'
+                >
+                  🔑 Go to Login
+                </button>
+              </div>
+            </div>
+          `;
+          sessionStorage.removeItem('temp_password');
+        }
+      } else {
+        // No password stored - show success and redirect to login
+        outputElement.innerHTML = `
+          <div style='max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); animation: slideIn 0.5s ease;'>
+            <div style='background: white; padding: 40px; border-radius: 8px; text-align: center;'>
+              <div style='font-size: 72px; margin-bottom: 20px; animation: bounceIn 0.6s ease;'>✅</div>
+              <h2 style='color: #2d5016; margin: 0 0 15px 0; font-size: 28px; font-weight: 700;'>Email Verified Successfully!</h2>
+              <p style='color: #4a7c2c; margin: 0 0 10px 0; font-size: 16px;'>Your email has been confirmed.</p>
+              <p style='color: #5a8c3c; margin: 0 0 30px 0; font-size: 18px; font-weight: 600;'>You can now log in with your credentials.</p>
+              
+              <div style='background: #f0f8e8; padding: 15px; border-radius: 6px; margin-bottom: 25px;'>
+                <p style='margin: 0; font-size: 14px; color: #4a7c2c;'>
+                  <strong>✓ Account Activated:</strong> ${email}
+                </p>
+              </div>
+
+              <button 
+                onclick="location.reload()" 
+                style='width: 100%; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700; box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4); transition: transform 0.2s;'
+                onmouseover="this.style.transform='translateY(-2px)';" 
+                onmouseout="this.style.transform='translateY(0)';"
+              >
+                🔑 Go to Login
+              </button>
+            </div>
+          </div>
+
+          <style>
+            @keyframes slideIn {
+              from { opacity: 0; transform: translateY(-20px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes bounceIn {
+              0% { transform: scale(0); }
+              50% { transform: scale(1.2); }
+              100% { transform: scale(1); }
+            }
+          </style>
+        `;
+      }
     } else {
       // Error response from server - show inline error
       confirmBtn.disabled = false;

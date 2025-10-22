@@ -217,11 +217,14 @@
           console.log('⚠️ User not confirmed - displaying verification form');
           console.log('Error details:', data);
           
+          // Store password temporarily in sessionStorage for auto-login after confirmation
+          sessionStorage.setItem('temp_login_password', password);
+          
           // FORCE UI REPLACEMENT - Replace entire auth-container
           const authContainer = document.getElementById('auth-container');
           if (authContainer) {
             authContainer.innerHTML = displayVerificationForm(email);
-            setupVerificationFormListeners(email);
+            setupVerificationFormListeners(email, password);
           } else {
             console.error('auth-container not found!');
           }
@@ -301,7 +304,7 @@
     }
 
     // Setup event listeners for verification form
-    function setupVerificationFormListeners(email) {
+    function setupVerificationFormListeners(email, password) {
       setTimeout(() => {
         const confirmBtn = document.getElementById('confirm-btn-final');
         const codeInput = document.getElementById('confirm-code-input');
@@ -312,12 +315,12 @@
           codeInput.focus();
 
           confirmBtn.addEventListener('click', async () => {
-            await handleConfirmation(storedEmail.value, codeInput);
+            await handleConfirmation(storedEmail.value, codeInput, password);
           });
 
           codeInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
-              await handleConfirmation(storedEmail.value, codeInput);
+              await handleConfirmation(storedEmail.value, codeInput, password);
             }
           });
 
@@ -337,8 +340,8 @@
       }, 100);
     }
 
-    // Handle confirmation
-    async function handleConfirmation(email, codeInput) {
+    // Handle confirmation with auto-login and role-based redirect
+    async function handleConfirmation(email, codeInput, password) {
       const verificationCode = codeInput.value.trim();
 
       if (!verificationCode || verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
@@ -353,6 +356,7 @@
 
         console.log('Sending POST to /api/auth/confirm');
 
+        // STEP 1: Confirm email
         const response = await fetch('/api/auth/confirm', {
           method: 'POST',
           headers: {
@@ -367,26 +371,115 @@
         const data = await response.json();
 
         if (response.ok && data.success) {
-          const authContainer = document.getElementById('auth-container');
-          authContainer.innerHTML = `
-            <div class="login-container">
-              <div class="login-box">
-                <div style="text-align: center; padding: 40px;">
-                  <div style="font-size: 72px; margin-bottom: 20px;">✅</div>
-                  <h2 style="color: #2d5016; font-size: 28px; font-weight: 700;">Email Verified Successfully!</h2>
-                  <p style="color: #4a7c2c; font-size: 16px; margin: 20px 0;">Your email has been confirmed.</p>
-                  <p style="color: #5a8c3c; font-size: 18px; font-weight: 600; margin-bottom: 30px;">You can now log in with your credentials.</p>
-                  <button 
-                    onclick="location.reload()" 
-                    style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 32px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;"
-                  >
-                    🔑 Go to Login
-                  </button>
+          console.log('✅ Email verified successfully:', data);
+          
+          // STEP 2: Immediate Login after successful confirmation
+          if (password) {
+            confirmBtn.innerHTML = '🔑 Logging in...';
+            console.log('🔑 Auto-login initiated...');
+            
+            try {
+              // Make POST request to /api/auth/login
+              const loginResponse = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  email: email,
+                  password: password
+                })
+              });
+
+              const loginData = await loginResponse.json();
+
+              if (loginResponse.ok && loginData.success) {
+                console.log('✅ Auto-login successful!');
+                console.log('👤 User data:', loginData.user);
+                
+                // Save tokens to localStorage
+                localStorage.setItem('accessToken', loginData.tokens.accessToken);
+                localStorage.setItem('idToken', loginData.tokens.idToken);
+                localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
+                localStorage.setItem('userData', JSON.stringify(loginData.user));
+                
+                // Clear temporary password
+                sessionStorage.removeItem('temp_login_password');
+                
+                // STEP 3: Role-Based Redirect
+                const userRole = loginData.user.role;
+                console.log('🎯 Role-based redirect for role:', userRole);
+                
+                // Show brief success message
+                confirmBtn.innerHTML = '✅ Redirecting...';
+                
+                // Redirect based on role
+                setTimeout(() => {
+                  if (userRole === 'provider') {
+                    console.log('➡️ Redirecting to provider-dashboard.html');
+                    window.location.href = 'provider-dashboard.html';
+                  } else if (userRole === 'seeker' || userRole === 'owner') {
+                    console.log('➡️ Redirecting to owner-dashboard.html');
+                    window.location.href = 'owner-dashboard.html';
+                  } else {
+                    // Fallback for any other role
+                    console.log('➡️ Redirecting to default dashboard (owner-dashboard.html)');
+                    window.location.href = 'owner-dashboard.html';
+                  }
+                }, 1000);
+                
+              } else {
+                // Login failed after verification
+                console.error('❌ Auto-login failed:', loginData);
+                throw new Error(loginData.message || 'Login failed after verification');
+              }
+            } catch (loginError) {
+              console.error('❌ Auto-login error:', loginError);
+              
+              // Show success but ask user to login manually
+              const authContainer = document.getElementById('auth-container');
+              authContainer.innerHTML = `
+                <div class="login-container">
+                  <div class="login-box">
+                    <div style="text-align: center; padding: 40px;">
+                      <div style="font-size: 72px; margin-bottom: 20px;">✅</div>
+                      <h2 style="color: #2d5016; font-size: 28px; font-weight: 700;">Email Verified Successfully!</h2>
+                      <p style="color: #4a7c2c; font-size: 16px; margin: 20px 0;">Your email has been confirmed.</p>
+                      <p style="color: #5a8c3c; font-size: 18px; font-weight: 600; margin-bottom: 30px;">Please log in with your credentials.</p>
+                      <button 
+                        onclick="location.reload()" 
+                        style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 32px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;"
+                      >
+                        🔑 Go to Login
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+              sessionStorage.removeItem('temp_login_password');
+            }
+          } else {
+            // No password stored - fallback to manual login
+            const authContainer = document.getElementById('auth-container');
+            authContainer.innerHTML = `
+              <div class="login-container">
+                <div class="login-box">
+                  <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 72px; margin-bottom: 20px;">✅</div>
+                    <h2 style="color: #2d5016; font-size: 28px; font-weight: 700;">Email Verified Successfully!</h2>
+                    <p style="color: #4a7c2c; font-size: 16px; margin: 20px 0;">Your email has been confirmed.</p>
+                    <p style="color: #5a8c3c; font-size: 18px; font-weight: 600; margin-bottom: 30px;">You can now log in with your credentials.</p>
+                    <button 
+                      onclick="location.reload()" 
+                      style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 32px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;"
+                    >
+                      🔑 Go to Login
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          `;
-          console.log('✅ Email verified successfully:', data);
+            `;
+          }
         } else {
           confirmBtn.disabled = false;
           confirmBtn.innerHTML = '✅ Verify Email';
