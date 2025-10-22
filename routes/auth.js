@@ -70,12 +70,14 @@ router.post('/signup', async (req, res) => {
     }
 
     // CRITICAL CHECK: Ensure serviceType is present if user is a provider
-    if (role === 'provider' && (!serviceType || serviceType.trim() === '')) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing service type',
-        message: 'Service type is required for providers'
-      });
+    if (role === 'provider') {
+      if (!serviceType || serviceType.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing service type',
+          message: 'Service type is required for providers'
+        });
+      }
     }
 
     console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
@@ -96,19 +98,23 @@ router.post('/signup', async (req, res) => {
       }
     ];
 
-    // Add custom attributes
+    // Add custom attributes with strict conditional logic
+    // CRITICAL: Always add custom:role for all users
     if (role) {
       userAttributes.push({
         Name: 'custom:role',
         Value: role
       });
+      console.log('🔧 Adding custom:role attribute:', role);
     }
 
+    // CRITICAL: Add custom:serviceType only for providers and only if present
     if (role === 'provider' && serviceType) {
       userAttributes.push({
         Name: 'custom:serviceType',
         Value: serviceType
       });
+      console.log('🔧 Adding custom:serviceType attribute:', serviceType);
     }
 
     const signUpParams = {
@@ -118,7 +124,7 @@ router.post('/signup', async (req, res) => {
       UserAttributes: userAttributes
     };
 
-    console.log('🔐 Cognito SignUp Params (standard attributes only):', JSON.stringify(signUpParams, null, 2));
+    console.log('🔐 Cognito SignUp Params (standard and custom attributes):', JSON.stringify(signUpParams, null, 2));
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
@@ -179,6 +185,16 @@ router.post('/signup', async (req, res) => {
           success: false,
           code: 'INVALID_CUSTOM_ATTRIBUTES',
           message: 'Custom attributes are not properly configured in Cognito User Pool. Please contact administrator.',
+          details: error.message
+        });
+      }
+      
+      // Handle specific provider validation errors
+      if (error.code === 'InvalidParameterException' && error.message.includes('serviceType')) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_SERVICE_TYPE',
+          message: 'Service type validation failed. Please check the service type value.',
           details: error.message
         });
       }
