@@ -400,6 +400,14 @@
           serviceTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
           return;
         }
+        
+        // FINAL VALIDATION: Ensure serviceType is not just whitespace
+        if (serviceType.trim().length === 0) {
+          showError('Please select a valid service type');
+          serviceTypeSection.style.border = '2px solid #e53e3e';
+          serviceTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
       }
 
       setLoadingState(true);
@@ -412,7 +420,7 @@
           fullName: fullName,
           role: role,
           address: address,
-          serviceType: role === 'provider' ? serviceType : null
+          serviceType: role === 'provider' ? serviceType.trim() : null
         };
         
         console.log('📤 Signup data being sent:', signupData);

@@ -51,6 +51,104 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
     // Redirect to signup.html instead of using hardcoded form
     window.location.href = 'signup.html';
   });
+  
+  // Add event listener for direct signup form if it exists
+  document.addEventListener('DOMContentLoaded', function() {
+    const directSignupForm = document.getElementById('direct-signup-form');
+    if (directSignupForm) {
+      directSignupForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get form values
+        const fullName = document.getElementById('direct-fullname').value.trim();
+        const email = document.getElementById('direct-email').value.trim();
+        const password = document.getElementById('direct-password').value;
+        const address = document.getElementById('direct-address').value.trim();
+        const role = document.getElementById('direct-role').value;
+        
+        // CRITICAL: Retrieve the serviceType value directly from the hidden input
+        const serviceType = document.getElementById('selectedServiceTypeInput').value;
+        
+        // Basic validation
+        if (!fullName || !email || !password || !address || !role) {
+          alert('Please fill in all fields');
+          return;
+        }
+        
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          alert('Please enter a valid email address');
+          return;
+        }
+        
+        // Password validation (simple check)
+        if (password.length < 8) {
+          alert('Password must be at least 8 characters long');
+          return;
+        }
+        
+        // CRITICAL VALIDATION: Service type validation for providers
+        if (role === 'provider') {
+          // Strictly validate that the serviceType value is not empty
+          if (!serviceType || serviceType === "" || serviceType === null) {
+            alert('Please select a service type');
+            return;
+          }
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('direct-signup-btn');
+        const originalBtnText = submitBtn.textContent;
+        submitBtn.textContent = 'Signing up...';
+        submitBtn.disabled = true;
+        
+        try {
+          // Prepare signup data
+          const signupData = {
+            fullName: fullName,
+            email: email,
+            password: password,
+            role: role,
+            address: address,
+            serviceType: role === 'provider' ? serviceType : null
+          };
+          
+          console.log('📤 Sending signup data:', signupData);
+          
+          // Send request to backend API
+          const response = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(signupData)
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            alert('Account created successfully! Please check your email to verify your account.');
+            // Reset form
+            directSignupForm.reset();
+            // Hide form
+            document.getElementById('signup-form-container').style.display = 'none';
+            // Reset service type input
+            document.getElementById('selectedServiceTypeInput').value = '';
+          } else {
+            alert('Signup failed: ' + (data.message || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Signup error:', error);
+          alert('An error occurred during signup. Please try again.');
+        } finally {
+          // Reset button state
+          submitBtn.textContent = originalBtnText;
+          submitBtn.disabled = false;
+        }
+      });
+    }
+  });
 }
 
 // Login Button Handler

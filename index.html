@@ -43,18 +43,69 @@
         <p>Your city's best plumbers, electricians, tutors & more — all in one place.</p>
       </div>
 
+      <!-- Signup Form (Hidden by default) -->
+      <div id="signup-form-container" style="display: none; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="text-align: center; margin-bottom: 20px;">Create Your Account</h2>
+        <form id="direct-signup-form">
+          <div style="margin-bottom: 15px;">
+            <label for="direct-fullname" style="display: block; margin-bottom: 5px;">Full Name</label>
+            <input type="text" id="direct-fullname" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label for="direct-email" style="display: block; margin-bottom: 5px;">Email</label>
+            <input type="email" id="direct-email" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label for="direct-password" style="display: block; margin-bottom: 5px;">Password</label>
+            <input type="password" id="direct-password" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label for="direct-address" style="display: block; margin-bottom: 5px;">Address</label>
+            <input type="text" id="direct-address" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label for="direct-role" style="display: block; margin-bottom: 5px;">Role</label>
+            <select id="direct-role" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required>
+              <option value="">Select your role</option>
+              <option value="owner">Service Owner</option>
+              <option value="provider">Service Provider</option>
+            </select>
+          </div>
+          
+          <!-- Service Type Selection - Hidden by default -->
+          <div id="direct-service-type-section" style="display: none; margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">Service Type</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button type="button" class="direct-service-option" data-value="Plumber" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer;">Plumber</button>
+              <button type="button" class="direct-service-option" data-value="Electrician" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer;">Electrician</button>
+              <button type="button" class="direct-service-option" data-value="Painter" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer;">Painter</button>
+              <button type="button" class="direct-service-option" data-value="AC Technician" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer;">AC Technician</button>
+            </div>
+            <!-- Hidden input to store the selected service type -->
+            <input type="hidden" id="selectedServiceTypeInput" value="">
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px;">
+            <button type="submit" id="direct-signup-btn" style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Sign Up</button>
+            <button type="button" id="cancel-direct-signup" style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Cancel</button>
+          </div>
+        </form>
+      </div>
+
       <div class="action-buttons">
-        <a href="signup.html" class="btn-link">
-          <button class="action-btn primary-btn" id="signup-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="8.5" cy="7" r="4"></circle>
-              <path d="M20 8v6"></path>
-              <path d="M23 11h-6"></path>
-            </svg>
-            Sign Up
-          </button>
-        </a>
+        <button class="action-btn primary-btn" id="signup-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <path d="M20 8v6"></path>
+            <path d="M23 11h-6"></path>
+          </svg>
+          Sign Up
+        </button>
         <a href="login.html" class="btn-link">
           <button class="action-btn secondary-btn" id="login-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -110,6 +161,52 @@
           hamburgerBtn.classList.remove('active');
           mobileNav.classList.remove('menu-open');
         }
+      });
+      
+      // Direct signup form functionality
+      const signupBtn = document.getElementById('signup-btn');
+      const signupFormContainer = document.getElementById('signup-form-container');
+      const directSignupForm = document.getElementById('direct-signup-form');
+      const directRoleSelect = document.getElementById('direct-role');
+      const directServiceTypeSection = document.getElementById('direct-service-type-section');
+      const directServiceOptions = document.querySelectorAll('.direct-service-option');
+      const selectedServiceTypeInput = document.getElementById('selectedServiceTypeInput');
+      const cancelDirectSignup = document.getElementById('cancel-direct-signup');
+      
+      // Toggle signup form visibility
+      signupBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        signupFormContainer.style.display = 'block';
+      });
+      
+      // Cancel direct signup
+      cancelDirectSignup.addEventListener('click', function() {
+        signupFormContainer.style.display = 'none';
+      });
+      
+      // Toggle service type section based on role
+      directRoleSelect.addEventListener('change', function() {
+        if (this.value === 'provider') {
+          directServiceTypeSection.style.display = 'block';
+        } else {
+          directServiceTypeSection.style.display = 'none';
+          selectedServiceTypeInput.value = '';
+        }
+      });
+      
+      // Handle service type selection
+      directServiceOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          // Remove selected class from all options
+          directServiceOptions.forEach(opt => opt.style.background = '#f5f5f5');
+          
+          // Add selected style to clicked option
+          this.style.background = '#007bff';
+          this.style.color = 'white';
+          
+          // Update the hidden input field
+          selectedServiceTypeInput.value = this.getAttribute('data-value');
+        });
       });
     });
   </script>
