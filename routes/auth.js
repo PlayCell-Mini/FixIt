@@ -31,7 +31,7 @@ router.post('/signup', async (req, res) => {
     const { email, password, fullName, role, serviceType, address } = req.body;
     
     // CRITICAL: Log extracted values for diagnostic purposes
-    console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType);
+    console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
     
     // CRITICAL: Ensure serviceType is properly handled for providers
     let providerServiceType = null;
@@ -191,6 +191,7 @@ router.post('/signup', async (req, res) => {
       console.log('⚠️  Duplicate attribute names:', duplicates);
     }
 
+    // CRITICAL: Implement Payload Diagnostic as requested
     const signUpParams = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -203,7 +204,20 @@ router.post('/signup', async (req, res) => {
     console.log('🔐 Cognito SignUp Params (standard and custom attributes):', JSON.stringify(signUpParams, null, 2));
     
     // CRITICAL: Print final payload as requested for diagnostic purposes
-    console.log('FINAL COGNITO PAYLOAD:', JSON.stringify(filteredUserAttributes, null, 2));
+    console.log('FINAL COGNITO PAYLOAD:', JSON.stringify(signUpParams, null, 2));
+
+    // CRITICAL: Ensure data integrity before calling Cognito
+    if (!signUpParams.ClientId) {
+      throw new Error('COGNITO_CLIENT_ID is not configured in environment variables');
+    }
+    
+    if (!signUpParams.Username) {
+      throw new Error('Email (Username) is required for signup');
+    }
+    
+    if (!signUpParams.Password) {
+      throw new Error('Password is required for signup');
+    }
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
@@ -238,12 +252,13 @@ router.post('/signup', async (req, res) => {
       console.log('🔧 Adding serviceType for provider:', providerServiceType);
     }
 
-    // Save to DynamoDB using the single table approach with proper PK/SK
-    console.log('💾 Saving user data to DynamoDB with userId:', userId);
+    // CRITICAL: Restore Data Integrity - Save to DynamoDB using the correct method signature
+    console.log('💾 Saving user data to DynamoDB with userId:', userId, 'role:', role);
     await awsServices.saveUser(userId, userData, role);
 
     console.log('✅ User data saved to DynamoDB successfully');
 
+    // CRITICAL: Ensure server returns 201 Created status upon successful registration
     res.status(201).json({
       success: true,
       message: 'User registered successfully. Please check your email for verification.',
