@@ -4,25 +4,46 @@ const router = express.Router();
 
 // Get AWS services from server
 let cognito, cognitoIdentity, awsServices;
+// CRITICAL: Delay loading to ensure server initialization is complete
 setTimeout(() => {
-  cognito = require('../server').cognito;
-  cognitoIdentity = require('../server').cognitoIdentity;
-  awsServices = require('../server').awsServices;
+  try {
+    cognito = require('../server').cognito;
+    cognitoIdentity = require('../server').cognitoIdentity;
+    awsServices = require('../server').awsServices;
+  } catch (e) {
+    console.error("❌ Failed to load AWS services from server:", e.message);
+  }
 }, 100);
+
+/**
+ * Helper function to send detailed 400 response for missing fields
+ */
+function sendMissingFieldsError(res, fields) {
+  const missing = Object.keys(fields).filter(key => fields[key]);
+  
+  if (missing.length > 0) {
+    console.log('❌ Missing fields detected:', fields);
+    return res.status(400).json({
+      success: false,
+      code: 'MISSING_FIELDS',
+      error: 'Missing required fields',
+      message: `The following fields are required: ${missing.join(', ')}`
+    });
+  }
+  return null;
+}
 
 /**
  * POST /api/auth/signup
  * Register a new user with Cognito User Pool and save to DynamoDB
- * 
- * Request Body:
+ * * Request Body:
  * {
- *   email: string,
- *   password: string,
- *   fullName: string,
- *   role: 'owner' | 'provider',
- *   serviceType?: string (required if role is provider)
- *   address: string
- *   // Note: confirmPassword is handled exclusively by the frontend and not required by backend
+ * email: string,
+ * password: string,
+ * fullName: string,
+ * role: 'owner' | 'provider',
+ * serviceType?: string (required if role is provider)
+ * address: string
  * }
  */
 router.post('/signup', async (req, res) => {
@@ -31,16 +52,10 @@ router.post('/signup', async (req, res) => {
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
     
     // CRITICAL: Restore Payload - Ensure we're correctly retrieving all fields
-    // Note: confirmPassword is handled exclusively by the frontend and not required by backend
     const { email, password, fullName, role, serviceType, address } = req.body;
     
     // CRITICAL: Log extracted values for diagnostic purposes
     console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
-    
-    // CRITICAL FINAL FIX: Backend Validation Mismatch
-    // Ensure the backend extracts data using the EXACT case-sensitive names sent by the frontend:
-    // Must check for: fullName, email, password, role, and address
-    // Must NOT check for: confirmPassword (as it is not sent by the client)
     
     // Explicit validation to ensure all required fields are present
     const isEmailMissing = !email;
@@ -50,24 +65,18 @@ router.post('/signup', async (req, res) => {
     const isAddressMissing = !address;
     
     // Log which fields are missing for debugging
-    if (isEmailMissing || isPasswordMissing || isFullNameMissing || isRoleMissing || isAddressMissing) {
-      console.log('❌ Missing fields detected:', {
+    const missingFields = {
         email: isEmailMissing,
         password: isPasswordMissing,
         fullName: isFullNameMissing,
         role: isRoleMissing,
         address: isAddressMissing
-      });
-    }
-    
-    // Validation - Ensure we do NOT check for confirmPassword as it's frontend-only
-    if (isEmailMissing || isPasswordMissing || isFullNameMissing || isRoleMissing || isAddressMissing) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields',
-        message: 'email, password, fullName, role, and address are required'
-      });
-    }
+    };
+
+    // Validation - Ensure all mandatory fields are present
+    const missingError = sendMissingFieldsError(res, missingFields);
+    if (missingError) return missingError;
+
 
     if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       return res.status(400).json({
@@ -93,19 +102,10 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // Validate address (required by Cognito User Pool)
-    if (!address || !address.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing address',
-        message: 'Address is required for sign-up'
-      });
-    }
-
     // CRITICAL CHECK: Ensure serviceType is present if user is a provider
     let providerServiceType = null;
     if (role === 'provider') {
-      // Handle both serviceType and servicetype (case variations)
+      // Handle case where frontend uses serviceType
       providerServiceType = serviceType || req.body.servicetype || null;
       
       if (!providerServiceType || typeof providerServiceType !== 'string' || providerServiceType.trim() === '') {
@@ -125,23 +125,14 @@ router.post('/signup', async (req, res) => {
     // Sign up with Cognito User Pool - include only allowed standard and custom attributes
     const userAttributes = [];
 
-    // Add standard attributes (only those allowed during signup)
-    // Note: email is set as the Username, so we don't need to add it as an attribute
+    // Add standard attributes (name and address)
     if (fullName && fullName.trim() !== '') {
-      userAttributes.push({
-        Name: 'name',
-        Value: fullName.trim()
-      });
+      userAttributes.push({ Name: 'name', Value: fullName.trim() });
     }
-
-    // Add address attribute if required by Cognito User Pool
     if (address && address.trim() !== '') {
-      userAttributes.push({
-        Name: 'address',
-        Value: address.trim()
-      });
+      userAttributes.push({ Name: 'address', Value: address.trim() });
     }
-
+    
     // CRITICAL: Add custom attributes with FINAL conditional logic
     // Rule a: custom:role is always set to the user's role (provider or owner)
     if (role && role.trim() !== '') {
@@ -156,14 +147,12 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Invalid role',
-        message: 'Role is required and cannot be empty'
+        message: 'Role is required and cannot be empty (Cognito Payload validation)'
       });
     }
 
-    // Rule b: custom:servicetype is only included if the value is non-empty
-    // For providers, we've already validated that serviceType is present and non-empty
+    // Rule b: custom:servicetype is only included if the user is a provider AND the value is non-empty
     if (role === 'provider' && providerServiceType) {
-      // CRITICAL: Only add custom:servicetype if it's non-empty
       if (providerServiceType !== '') {
         userAttributes.push({
           Name: 'custom:servicetype',
@@ -172,9 +161,6 @@ router.post('/signup', async (req, res) => {
         console.log('🔧 Adding custom:servicetype attribute with value:', providerServiceType);
       }
     }
-
-    // CRITICAL: Log the raw userAttributes before filtering
-    console.log('🔍 Raw UserAttributes before filtering:', JSON.stringify(userAttributes, null, 2));
 
     // Filter out any attributes with empty values and prohibited attributes
     const prohibitedAttributes = ['sub', 'email_verified', 'phone_number_verified'];
@@ -188,16 +174,6 @@ router.post('/signup', async (req, res) => {
     // CRITICAL: Log the filtered attributes
     console.log('🔍 Filtered UserAttributes:', JSON.stringify(filteredUserAttributes, null, 2));
 
-    // CRITICAL: Check for duplicate attributes
-    const attributeNames = filteredUserAttributes.map(attr => attr.Name);
-    const uniqueAttributeNames = [...new Set(attributeNames)];
-    if (attributeNames.length !== uniqueAttributeNames.length) {
-      console.log('⚠️  WARNING: Duplicate attributes detected!');
-      const duplicates = attributeNames.filter((item, index) => attributeNames.indexOf(item) !== index);
-      console.log('⚠️  Duplicate attribute names:', duplicates);
-    }
-
-    // CRITICAL: Implement Payload Diagnostic as requested
     const signUpParams = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
@@ -206,12 +182,8 @@ router.post('/signup', async (req, res) => {
     };
 
     // Display the data to be sent to AWS
-    console.log('Cognito Payload Attributes: ', JSON.stringify(filteredUserAttributes, null, 2));
-    console.log('🔐 Cognito SignUp Params (standard and custom attributes):', JSON.stringify(signUpParams, null, 2));
+    console.log('🔐 Cognito SignUp Params:', JSON.stringify(signUpParams, null, 2));
     
-    // CRITICAL: Print final payload as requested for diagnostic purposes
-    console.log('FINAL COGNITO PAYLOAD:', JSON.stringify(signUpParams, null, 2));
-
     // CRITICAL: Ensure data integrity before calling Cognito
     if (!signUpParams.ClientId) {
       throw new Error('COGNITO_CLIENT_ID is not configured in environment variables');
@@ -304,7 +276,7 @@ router.post('/signup', async (req, res) => {
         return res.status(400).json({
           success: false,
           code: 'INVALID_PARAMETER',
-          message: 'Invalid parameter provided. Please check your input.',
+          message: error.message || 'Invalid parameter provided. Please check your input.',
           details: error.message
         });
       }
@@ -337,24 +309,22 @@ router.post('/signup', async (req, res) => {
 /**
  * POST /api/auth/login
  * Authenticate user and return temporary AWS credentials via Identity Pool
- * 
- * Request Body:
+ * * Request Body:
  * {
- *   email: string,
- *   password: string
+ * email: string,
+ * password: string
  * }
- * 
- * Response:
+ * * Response:
  * {
- *   success: true,
- *   tokens: { idToken, accessToken, refreshToken },
- *   user: { userId, email, role },
- *   awsCredentials: {
- *     accessKeyId: string,
- *     secretAccessKey: string,
- *     sessionToken: string,
- *     expiration: Date
- *   }
+ * success: true,
+ * tokens: { idToken, accessToken, refreshToken },
+ * user: { userId, email, role },
+ * awsCredentials: {
+ * accessKeyId: string,
+ * secretAccessKey: string,
+ * sessionToken: string,
+ * expiration: Date
+ * }
  * }
  */
 router.post('/login', async (req, res) => {
@@ -410,7 +380,7 @@ router.post('/login', async (req, res) => {
       userId: userId,
       email: attributes.email || email,
       name: attributes.name || '',
-      role: attributes['custom:role'] || 'seeker',
+      role: attributes['custom:role'] || 'owner', // Changed default role to 'owner'
       serviceType: attributes['custom:servicetype'] || null
     };
 
@@ -520,10 +490,9 @@ router.post('/login', async (req, res) => {
 /**
  * POST /api/auth/refresh
  * Refresh AWS credentials using existing ID token
- * 
- * Request Body:
+ * * Request Body:
  * {
- *   idToken: string
+ * idToken: string
  * }
  */
 router.post('/refresh', async (req, res) => {
@@ -548,7 +517,7 @@ router.post('/refresh', async (req, res) => {
     const getIdParams = {
       IdentityPoolId: identityPoolId,
       Logins: {
-        [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: idToken
+        [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: IdToken
       }
     };
 
@@ -600,11 +569,10 @@ router.post('/refresh', async (req, res) => {
 /**
  * POST /api/auth/verify
  * Verify email confirmation code
- * 
- * Request Body:
+ * * Request Body:
  * {
- *   email: string,
- *   code: string
+ * email: string,
+ * code: string
  * }
  */
 router.post('/verify', async (req, res) => {
@@ -662,23 +630,19 @@ router.post('/verify', async (req, res) => {
 /**
  * POST /api/auth/confirm
  * Confirm user signup with verification code
- * 
- * This endpoint is called by the frontend when a user needs to verify their email.
+ * * This endpoint is called by the frontend when a user needs to verify their email.
  * It uses AWS Cognito's confirmSignUp method to activate the user account.
- * 
- * Request Body:
+ * * Request Body:
  * {
- *   email: string,           // User's email address
- *   verificationCode: string  // 6-digit code from email
+ * email: string,           // User's email address
+ * verificationCode: string  // 6-digit code from email
  * }
- * 
- * Success Response (200 OK):
+ * * Success Response (200 OK):
  * {
- *   success: true,
- *   message: 'Email verified successfully. You can now login.'
+ * success: true,
+ * message: 'Email verified successfully. You can now login.'
  * }
- * 
- * Error Responses:
+ * * Error Responses:
  * - 400 Bad Request (Missing fields)
  * - 400 Bad Request (Invalid code - CodeMismatchException)
  * - 400 Bad Request (Expired code - ExpiredCodeException)
