@@ -489,19 +489,26 @@ class AWSService {
       // Convert email to lowercase to ensure consistency with Cognito stored value
       const normalizedEmail = email.toLowerCase();
       
+      // CRITICAL SIGNUP PAYLOAD FIX: Ensure all required fields are present
+      // Explicitly construct the payload with all mandatory fields
+      const payload = {
+        email: normalizedEmail,
+        password: password, // Explicitly include password parameter
+        fullName: userData.fullName || '', // Include fullName from userData
+        role: userData.role || 'owner', // Default to 'owner' if not provided
+        serviceType: userData.serviceType || null, // Include serviceType for providers
+        address: userData.address || '' // Include address
+      };
+      
+      // CRITICAL: Log payload for debugging purposes
+      console.log('📤 SignUp payload:', JSON.stringify(payload, null, 2));
+      
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password,
-          fullName: userData.fullName || '',
-          role: userData.role || 'owner',
-          serviceType: userData.serviceType || null,
-          address: userData.address || ''
-        })
+        body: JSON.stringify(payload) // Use the explicitly constructed payload
       });
 
       const data = await response.json();
