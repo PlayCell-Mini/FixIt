@@ -243,13 +243,7 @@
         }
         
         // CRITICAL VALIDATION: Service type validation for providers
-        if (role === 'provider') {
-          // Strictly validate that the serviceType value is not empty
-          if (!serviceType || serviceType === "" || serviceType === null) {
-            alert('Please select a service type');
-            return;
-          }
-        }
+        serviceType: role === 'provider' ? serviceType : null
         
         // Show loading state
         const submitBtn = document.getElementById('direct-signup-btn');
