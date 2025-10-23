@@ -124,6 +124,8 @@ router.post('/signup', async (req, res) => {
       UserAttributes: userAttributes
     };
 
+    // Display the data to be sent to AWS
+    console.log('Cognito Payload Attributes: ', JSON.stringify(userAttributes, null, 2));
     console.log('🔐 Cognito SignUp Params (standard and custom attributes):', JSON.stringify(signUpParams, null, 2));
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
