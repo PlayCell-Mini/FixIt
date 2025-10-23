@@ -26,6 +26,10 @@ setTimeout(() => {
 router.post('/signup', async (req, res) => {
   try {
     const { email, password, fullName, role, serviceType, address } = req.body;
+    
+    // CRITICAL: Log the raw request body for diagnostic purposes
+    console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
+    console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType);
 
     // Validation
     if (!email || !password || !fullName || !role) {
@@ -78,6 +82,8 @@ router.post('/signup', async (req, res) => {
           message: 'Service type is required for providers'
         });
       }
+      // CRITICAL: Log serviceType validation for diagnostic purposes
+      console.log('🔍 Provider serviceType validation - serviceType:', JSON.stringify(serviceType), 'trimmed:', JSON.stringify(serviceType.trim()));
     }
 
     console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
@@ -121,6 +127,9 @@ router.post('/signup', async (req, res) => {
       console.log('🔧 Adding custom:servicetype attribute:', serviceType);
     }
 
+    // CRITICAL: Log the raw userAttributes before filtering
+    console.log('🔍 Raw UserAttributes before filtering:', JSON.stringify(userAttributes, null, 2));
+
     // Filter out any attributes with empty values and prohibited attributes
     const prohibitedAttributes = ['sub', 'email_verified', 'phone_number_verified'];
     const filteredUserAttributes = userAttributes.filter(attr => 
@@ -129,6 +138,18 @@ router.post('/signup', async (req, res) => {
       attr.Value.toString().trim() !== '' &&
       !prohibitedAttributes.includes(attr.Name)
     );
+
+    // CRITICAL: Log the filtered attributes
+    console.log('🔍 Filtered UserAttributes:', JSON.stringify(filteredUserAttributes, null, 2));
+
+    // CRITICAL: Check for duplicate attributes
+    const attributeNames = filteredUserAttributes.map(attr => attr.Name);
+    const uniqueAttributeNames = [...new Set(attributeNames)];
+    if (attributeNames.length !== uniqueAttributeNames.length) {
+      console.log('⚠️  WARNING: Duplicate attributes detected!');
+      const duplicates = attributeNames.filter((item, index) => attributeNames.indexOf(item) !== index);
+      console.log('⚠️  Duplicate attribute names:', duplicates);
+    }
 
     const signUpParams = {
       ClientId: process.env.COGNITO_CLIENT_ID,
@@ -140,6 +161,9 @@ router.post('/signup', async (req, res) => {
     // Display the data to be sent to AWS
     console.log('Cognito Payload Attributes: ', JSON.stringify(filteredUserAttributes, null, 2));
     console.log('🔐 Cognito SignUp Params (standard and custom attributes):', JSON.stringify(signUpParams, null, 2));
+    
+    // CRITICAL: Print final payload as requested for diagnostic purposes
+    console.log('FINAL COGNITO PAYLOAD:', JSON.stringify(filteredUserAttributes, null, 2));
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
 
