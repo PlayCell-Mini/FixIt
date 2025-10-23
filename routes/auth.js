@@ -22,6 +22,7 @@ setTimeout(() => {
  *   role: 'owner' | 'provider',
  *   serviceType?: string (required if role is provider)
  *   address: string
+ *   // Note: confirmPassword is handled exclusively by the frontend and not required by backend
  * }
  */
 router.post('/signup', async (req, res) => {
@@ -30,12 +31,13 @@ router.post('/signup', async (req, res) => {
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
     
     // CRITICAL: Restore Payload - Ensure we're correctly retrieving all fields
+    // Note: confirmPassword is handled exclusively by the frontend and not required by backend
     const { email, password, fullName, role, serviceType, address } = req.body;
     
     // CRITICAL: Log extracted values for diagnostic purposes
     console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
     
-    // Validation
+    // Validation - Ensure we do NOT check for confirmPassword as it's frontend-only
     if (!email || !password || !fullName || !role || !address) {
       return res.status(400).json({
         success: false,
