@@ -52,25 +52,25 @@ router.post('/signup', async (req, res) => {
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
     
     // CRITICAL: Restore Payload - Ensure we're correctly retrieving all fields
-    const { email, password, fullName, role, serviceType, address } = req.body;
+    // Use the full req.body access to ensure we catch any null/undefined values and trim strings immediately.
+    const email = req.body.email ? req.body.email.trim() : null;
+    const password = req.body.password || null;
+    const fullName = req.body.fullName ? req.body.fullName.trim() : null;
+    const role = req.body.role || null;
+    const address = req.body.address ? req.body.address.trim() : null;
+    const serviceType = req.body.serviceType || req.body.servicetype || null; // Capture both cases
     
     // CRITICAL: Log extracted values for diagnostic purposes
     console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
     
     // Explicit validation to ensure all required fields are present
-    const isEmailMissing = !email;
-    const isPasswordMissing = !password;
-    const isFullNameMissing = !fullName;
-    const isRoleMissing = !role;
-    const isAddressMissing = !address;
-    
-    // Log which fields are missing for debugging
+    // Note: Checking against the variables derived above, where "" is treated as null.
     const missingFields = {
-        email: isEmailMissing,
-        password: isPasswordMissing,
-        fullName: isFullNameMissing,
-        role: isRoleMissing,
-        address: isAddressMissing
+        fullName: !fullName,
+        email: !email,
+        password: !password,
+        role: !role,
+        address: !address
     };
 
     // Validation - Ensure all mandatory fields are present
@@ -106,7 +106,7 @@ router.post('/signup', async (req, res) => {
     let providerServiceType = null;
     if (role === 'provider') {
       // Handle case where frontend uses serviceType
-      providerServiceType = serviceType || req.body.servicetype || null;
+      providerServiceType = serviceType; // Already extracted and set to null if empty
       
       if (!providerServiceType || typeof providerServiceType !== 'string' || providerServiceType.trim() === '') {
         return res.status(400).json({
@@ -404,8 +404,6 @@ router.post('/login', async (req, res) => {
     const identityResult = await cognitoIdentity.getId(getIdParams).promise();
     const identityId = identityResult.IdentityId;
 
-    console.log('🆔 Identity ID:', identityId);
-
     // Get temporary credentials
     const credentialsParams = {
       IdentityId: identityId,
@@ -528,7 +526,7 @@ router.post('/refresh', async (req, res) => {
     const credentialsParams = {
       IdentityId: identityId,
       Logins: {
-        [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: idToken
+        [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: IdToken
       }
     };
 
@@ -653,7 +651,6 @@ router.post('/confirm', async (req, res) => {
   try {
     const { email, verificationCode } = req.body;
 
-    // Validation
     if (!email || !verificationCode) {
       return res.status(400).json({
         success: false,
