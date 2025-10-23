@@ -210,16 +210,17 @@ document.getElementById("login-btn").addEventListener("click", async () => {
       const role = data.user.role;
       console.log('🎯 Forcing redirect for role:', role);
       
+      // CRITICAL REDIRECTION FIX: Use window.location.replace for final redirect
       if (role === 'owner') {
         console.log('➡️ Redirecting to owner-dashboard.html');
-        window.location.href = 'owner-dashboard.html';
+        window.location.replace('owner-dashboard.html');
       } else if (role === 'provider') {
         console.log('➡️ Redirecting to provider-dashboard.html');
-        window.location.href = 'provider-dashboard.html';
+        window.location.replace('provider-dashboard.html');
       } else {
         // Fallback for any other role (owner, etc.)
         console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
-        window.location.href = 'owner-dashboard.html';
+        window.location.replace('owner-dashboard.html');
       }
     } 
     // CRUCIAL LOGIC: Check specifically for USER_NOT_CONFIRMED error code
@@ -470,25 +471,20 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
               console.log('🔐 AWS temporary credentials saved to localStorage');
             }
             
-            // Clear temporary password from sessionStorage
+            // Clear temporary password
             sessionStorage.removeItem('temp_password');
             
-            // FORCE IMMEDIATE REDIRECT - No delays, no async code
-            const role = loginData.user.role;
-            console.log('🎯 Forcing redirect for role:', role);
-            
+            // CRITICAL REDIRECTION FIX: Implement final forced redirect with window.location.replace
+            // Login success hone par
+            const role = loginData.user.role; 
             if (role === 'owner') {
-              console.log('➡️ Redirecting to owner-dashboard.html');
-              window.location.href = 'owner-dashboard.html';
+                window.location.replace('owner-dashboard.html');
             } else if (role === 'provider') {
-              console.log('➡️ Redirecting to provider-dashboard.html');
-              window.location.href = 'provider-dashboard.html';
+                window.location.replace('provider-dashboard.html');
             } else {
-              // Fallback for any other role (owner, etc.)
-              console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
-              window.location.href = 'owner-dashboard.html';
+                window.location.replace('login.html'); // Fallback
             }
-            
+
           } else {
             // Login failed after verification - show error
             console.error('❌ Auto-login failed:', loginData);
@@ -506,7 +502,7 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
                 <p style='color: #4a7c2c; margin: 0 0 10px 0; font-size: 16px;'>Your email has been confirmed.</p>
                 <p style='color: #5a8c3c; margin: 0 0 30px 0; font-size: 18px; font-weight: 600;'>Please log in with your credentials.</p>
                 <button 
-                  onclick="location.reload()" 
+                  onclick="window.location.replace('login.html')" 
                   style='width: 100%; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;'
                 >
                   🔑 Go to Login
@@ -516,6 +512,7 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
           `;
           sessionStorage.removeItem('temp_password');
         }
+
       } else {
         // No password stored - show success and redirect to login
         outputElement.innerHTML = `
@@ -533,7 +530,7 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
               </div>
 
               <button 
-                onclick="location.reload()" 
+                onclick="window.location.replace('login.html')" 
                 style='width: 100%; background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700; box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4); transition: transform 0.2s;'
                 onmouseover="this.style.transform='translateY(-2px)';" 
                 onmouseout="this.style.transform='translateY(0)';"

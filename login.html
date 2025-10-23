@@ -244,14 +244,16 @@
           const role = data.user.role;
           console.log('🎯 Forcing redirect for role:', role);
           
+          // CRITICAL REDIRECTION FIX: Use window.location.replace for final redirect
           if (role === 'owner') {
-            window.location.href = 'owner-dashboard.html';
+            window.location.replace('owner-dashboard.html');
           } else if (role === 'provider') {
-            window.location.href = 'provider-dashboard.html';
+            window.location.replace('provider-dashboard.html');
           } else {
             // Fallback for any other role (seeker, etc.)
-            window.location.href = 'owner-dashboard.html';
+            window.location.replace('owner-dashboard.html');
           }
+
         }
         // CRITICAL: Check for USER_NOT_CONFIRMED error code
         else if (data.code === 'USER_NOT_CONFIRMED' || 
@@ -457,22 +459,17 @@
                 // Clear temporary password
                 sessionStorage.removeItem('temp_login_password');
                 
-                // FORCE IMMEDIATE REDIRECT - No delays, no async code
-                const role = loginData.user.role;
-                console.log('🎯 Forcing redirect for role:', role);
-                
+                // CRITICAL REDIRECTION FIX: Implement final forced redirect with window.location.replace
+                // Login success hone par
+                const role = loginData.user.role; 
                 if (role === 'owner') {
-                  console.log('➡️ Redirecting to owner-dashboard.html');
-                  window.location.href = 'owner-dashboard.html';
+                    window.location.replace('owner-dashboard.html');
                 } else if (role === 'provider') {
-                  console.log('➡️ Redirecting to provider-dashboard.html');
-                  window.location.href = 'provider-dashboard.html';
+                    window.location.replace('provider-dashboard.html');
                 } else {
-                  // Fallback for any other role (seeker, etc.)
-                  console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
-                  window.location.href = 'owner-dashboard.html';
+                    window.location.replace('login.html'); // Fallback
                 }
-                
+
               } else {
                 // Login failed after verification
                 console.error('❌ Auto-login failed:', loginData);
@@ -492,7 +489,7 @@
                       <p style="color: #4a7c2c; font-size: 16px; margin: 20px 0;">Your email has been confirmed.</p>
                       <p style="color: #5a8c3c; font-size: 18px; font-weight: 600; margin-bottom: 30px;">Please log in with your credentials.</p>
                       <button 
-                        onclick="location.reload()" 
+                        onclick="window.location.replace('login.html')" 
                         style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 32px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;"
                       >
                         🔑 Go to Login
@@ -503,6 +500,7 @@
               `;
               sessionStorage.removeItem('temp_login_password');
             }
+
           } else {
             // No password stored - fallback to manual login
             const authContainer = document.getElementById('auth-container');
@@ -515,7 +513,7 @@
                     <p style="color: #4a7c2c; font-size: 16px; margin: 20px 0;">Your email has been confirmed.</p>
                     <p style="color: #5a8c3c; font-size: 18px; font-weight: 600; margin-bottom: 30px;">You can now log in with your credentials.</p>
                     <button 
-                      onclick="location.reload()" 
+                      onclick="window.location.replace('login.html')" 
                       style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white; padding: 16px 32px; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 700;"
                     >
                       🔑 Go to Login
