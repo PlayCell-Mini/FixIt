@@ -2,18 +2,10 @@
 const express = require('express');
 const router = express.Router();
 
-// Get AWS services from server
-let cognito, cognitoIdentity, awsServices;
-// CRITICAL: Delay loading to ensure server initialization is complete
-setTimeout(() => {
-  try {
-    cognito = require('../server').cognito;
-    cognitoIdentity = require('../server').cognitoIdentity;
-    awsServices = require('../server').awsServices;
-  } catch (e) {
-    console.error("❌ Failed to load AWS services from server:", e.message);
-  }
-}, 100);
+// Get AWS services from server directly (removed setTimeout pattern)
+const cognito = require('../server').cognito;
+const cognitoIdentity = require('../server').cognitoIdentity;
+const awsServices = require('../server').awsServices;
 
 /**
  * Helper function to send detailed 400 response for missing fields
