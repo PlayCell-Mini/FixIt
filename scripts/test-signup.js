@@ -162,6 +162,11 @@ async function runTests() {
   console.log(`${passed}/${total} tests passed`);
   console.log('='.repeat(60) + '\n');
 
+  // If all tests pass, let's do a detailed verification
+  if (passed === total) {
+    console.log('🎉 All tests passed! The signup functionality is working correctly.');
+  }
+
   process.exit(passed === total ? 0 : 1);
 }
 
