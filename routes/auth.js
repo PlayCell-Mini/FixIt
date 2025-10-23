@@ -82,50 +82,63 @@ router.post('/signup', async (req, res) => {
 
     console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
 
-    // Sign up with Cognito User Pool - include both standard and custom attributes
-    const userAttributes = [
-      {
-        Name: 'email',
-        Value: email
-      },
-      {
+    // Sign up with Cognito User Pool - include only allowed standard and custom attributes
+    const userAttributes = [];
+
+    // Add standard attributes (only those allowed during signup)
+    // Note: email is set as the Username, so we don't need to add it as an attribute
+    if (fullName && fullName.trim() !== '') {
+      userAttributes.push({
         Name: 'name',
-        Value: fullName
-      },
-      {
+        Value: fullName.trim()
+      });
+    }
+
+    // Add address attribute if required by Cognito User Pool
+    if (address && address.trim() !== '') {
+      userAttributes.push({
         Name: 'address',
-        Value: address
-      }
-    ];
+        Value: address.trim()
+      });
+    }
 
     // Add custom attributes with strict conditional logic
-    // CRITICAL: Always add custom:role for all users
-    if (role) {
+    // CRITICAL: Always add custom:role for all users (if non-empty)
+    if (role && role.trim() !== '') {
       userAttributes.push({
         Name: 'custom:role',
-        Value: role
+        Value: role.trim()
       });
       console.log('🔧 Adding custom:role attribute:', role);
     }
 
-    // CRITICAL: Add custom:serviceType only for providers and only if present
-    if (role === 'provider' && serviceType) {
+    // CRITICAL: Add custom:serviceType only for providers and only if present (and non-empty)
+    if (role === 'provider' && serviceType && serviceType.trim() !== '') {
       userAttributes.push({
         Name: 'custom:serviceType',
-        Value: serviceType
+        Value: serviceType.trim()
       });
       console.log('🔧 Adding custom:serviceType attribute:', serviceType);
     }
+
+    // Filter out any attributes with empty values and prohibited attributes
+    const prohibitedAttributes = ['sub', 'email_verified', 'phone_number_verified'];
+    const filteredUserAttributes = userAttributes.filter(attr => 
+      attr.Value !== null && 
+      attr.Value !== undefined && 
+      attr.Value.toString().trim() !== '' &&
+      !prohibitedAttributes.includes(attr.Name)
+    );
 
     const signUpParams = {
       ClientId: process.env.COGNITO_CLIENT_ID,
       Username: email,
       Password: password,
-      UserAttributes: userAttributes
+      UserAttributes: filteredUserAttributes
     };
 
     // Display the data to be sent to AWS
-    console.log('Cognito Payload Attributes: ', JSON.stringify(userAttributes, null, 2));
+    console.log('Cognito Payload Attributes: ', JSON.stringify(filteredUserAttributes, null, 2));
     console.log('🔐 Cognito SignUp Params (standard and custom attributes):', JSON.stringify(signUpParams, null, 2));
 
     const signUpResult = await cognito.signUp(signUpParams).promise();
