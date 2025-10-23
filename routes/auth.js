@@ -230,18 +230,27 @@ router.post('/signup', async (req, res) => {
       console.log('🔧 Adding serviceType for provider:', providerServiceType);
     }
 
-    // CRITICAL FINAL FIX: DynamoDB Write Failure 500 Error
-    // Bypass Service Helper and implement direct, safe DynamoDB put logic
-    console.log('💾 Saving user data to DynamoDB with userId:', userId, 'role:', role);
+    // CRITICAL SYNTAX FIX FOR 500 ERROR
+    // Get DynamoDB client directly from server with proper error handling
+    let dynamoDB;
+    try {
+      dynamoDB = require('../server').dynamoDB;
+      if (!dynamoDB) {
+        throw new Error('DynamoDB client not available from server module');
+      }
+    } catch (importError) {
+      console.error('❌ Failed to import DynamoDB client:', importError);
+      throw new Error('Failed to initialize DynamoDB client');
+    }
     
-    // Get DynamoDB client directly from server
-    const dynamoDB = require('../server').dynamoDB;
+    // Get table name from environment variables
     const tableName = process.env.DYNAMODB_USERS_TABLE || 'FixIt';
+    console.log('💾 Saving user data to DynamoDB table:', tableName, 'with userId:', userId, 'role:', role);
     
     // Create proper PK/SK structure for single table design
     const pk = role === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
     
-    // Prepare item for DynamoDB
+    // Prepare item for DynamoDB with correct JavaScript object syntax
     const item = {
       PK: pk,
       SK: 'PROFILE#INFO',
@@ -251,15 +260,15 @@ router.post('/signup', async (req, res) => {
       updatedAt: new Date().toISOString()
     };
     
-    // Direct DynamoDB put operation
-    const params = {
+    // Direct DynamoDB put operation with correct syntax
+    const dbParams = {
       TableName: tableName,
       Item: item
     };
     
     try {
-      console.log('🔄 Attempting direct DynamoDB put operation...', JSON.stringify(params, null, 2));
-      await dynamoDB.put(params).promise();
+      console.log('🔄 Attempting direct DynamoDB put operation...', JSON.stringify(dbParams, null, 2));
+      await dynamoDB.put(dbParams).promise();
       console.log('✅ User data saved to DynamoDB successfully via direct put');
     } catch (dynamoError) {
       console.error('❌ DynamoDB Save Error:', dynamoError);
