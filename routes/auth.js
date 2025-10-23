@@ -25,11 +25,21 @@ setTimeout(() => {
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password, fullName, role, serviceType, address } = req.body;
-    
     // CRITICAL: Log the raw request body for diagnostic purposes
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
+    
+    const { email, password, fullName, role, serviceType, address } = req.body;
+    
+    // CRITICAL: Log extracted values for diagnostic purposes
     console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType);
+    
+    // CRITICAL: Ensure serviceType is properly handled for providers
+    let providerServiceType = null;
+    if (role === 'provider') {
+      // Handle both serviceType and servicetype (case variations)
+      providerServiceType = serviceType || req.body.servicetype || null;
+      console.log('🔧 Provider serviceType resolved to:', providerServiceType);
+    }
 
     // Validation
     if (!email || !password || !fullName || !role) {
@@ -75,7 +85,8 @@ router.post('/signup', async (req, res) => {
 
     // CRITICAL CHECK: Ensure serviceType is present if user is a provider
     if (role === 'provider') {
-      if (!serviceType || serviceType.trim() === '') {
+      // Use the resolved serviceType
+      if (!providerServiceType || typeof providerServiceType !== 'string' || providerServiceType.trim() === '') {
         return res.status(400).json({
           success: false,
           error: 'Missing service type',
@@ -83,10 +94,10 @@ router.post('/signup', async (req, res) => {
         });
       }
       // CRITICAL: Log serviceType validation for diagnostic purposes
-      console.log('🔍 Provider serviceType validation - serviceType:', JSON.stringify(serviceType), 'trimmed:', JSON.stringify(serviceType.trim()));
+      console.log('🔍 Provider serviceType validation - serviceType:', JSON.stringify(providerServiceType), 'trimmed:', JSON.stringify(providerServiceType.trim()));
     }
 
-    console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', serviceType);
+    console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', providerServiceType);
 
     // Sign up with Cognito User Pool - include only allowed standard and custom attributes
     const userAttributes = [];
@@ -108,23 +119,25 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // Add custom attributes with strict conditional logic
-    // CRITICAL: Always add custom:role for all users (if non-empty)
+    // CRITICAL: Add custom attributes with FINAL conditional logic
+    // Rule a: custom:role is always set to the user's role (provider or owner)
     if (role && role.trim() !== '') {
       userAttributes.push({
         Name: 'custom:role',
-        Value: role.trim()
+        Value: role.trim() // This will be 'provider' for providers
       });
-      console.log('🔧 Adding custom:role attribute:', role);
+      console.log('🔧 Adding custom:role attribute with value:', role.trim());
     }
 
-    // CRITICAL: Add custom:servicetype only for providers and only if present (and non-empty)
-    if (role === 'provider' && serviceType && serviceType.trim() !== '') {
+    // Rule b: custom:servicetype is only included if the value is non-empty
+    // For providers, we've already validated that serviceType is present and non-empty
+    if (role === 'provider' && providerServiceType && typeof providerServiceType === 'string' && providerServiceType.trim() !== '') {
+      const trimmedServiceType = providerServiceType.trim();
       userAttributes.push({
         Name: 'custom:servicetype',
-        Value: serviceType.trim()
+        Value: trimmedServiceType
       });
-      console.log('🔧 Adding custom:servicetype attribute:', serviceType);
+      console.log('🔧 Adding custom:servicetype attribute with value:', trimmedServiceType);
     }
 
     // CRITICAL: Log the raw userAttributes before filtering
@@ -193,9 +206,9 @@ router.post('/signup', async (req, res) => {
     };
 
     // CRITICAL: Add serviceType for providers
-    if (role === 'provider' && serviceType) {
-      userData.serviceType = serviceType;
-      console.log('🔧 Adding serviceType for provider:', serviceType);
+    if (role === 'provider' && providerServiceType) {
+      userData.serviceType = providerServiceType;
+      console.log('🔧 Adding serviceType for provider:', providerServiceType);
     }
 
     // Save to DynamoDB using the single table approach with proper PK/SK
@@ -234,6 +247,26 @@ router.post('/signup', async (req, res) => {
           success: false,
           code: 'INVALID_SERVICE_TYPE',
           message: 'Service type validation failed. Please check the service type value.',
+          details: error.message
+        });
+      }
+      
+      // Handle general InvalidParameterException
+      if (error.code === 'InvalidParameterException') {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_PARAMETER',
+          message: 'Invalid parameter provided. Please check your input.',
+          details: error.message
+        });
+      }
+      
+      // Handle UsernameExistsException
+      if (error.code === 'UsernameExistsException') {
+        return res.status(400).json({
+          success: false,
+          code: 'USERNAME_EXISTS',
+          message: 'An account with this email already exists.',
           details: error.message
         });
       }
