@@ -37,8 +37,31 @@ router.post('/signup', async (req, res) => {
     // CRITICAL: Log extracted values for diagnostic purposes
     console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
     
+    // CRITICAL FINAL FIX: Backend Validation Mismatch
+    // Ensure the backend extracts data using the EXACT case-sensitive names sent by the frontend:
+    // Must check for: fullName, email, password, role, and address
+    // Must NOT check for: confirmPassword (as it is not sent by the client)
+    
+    // Explicit validation to ensure all required fields are present
+    const isEmailMissing = !email;
+    const isPasswordMissing = !password;
+    const isFullNameMissing = !fullName;
+    const isRoleMissing = !role;
+    const isAddressMissing = !address;
+    
+    // Log which fields are missing for debugging
+    if (isEmailMissing || isPasswordMissing || isFullNameMissing || isRoleMissing || isAddressMissing) {
+      console.log('❌ Missing fields detected:', {
+        email: isEmailMissing,
+        password: isPasswordMissing,
+        fullName: isFullNameMissing,
+        role: isRoleMissing,
+        address: isAddressMissing
+      });
+    }
+    
     // Validation - Ensure we do NOT check for confirmPassword as it's frontend-only
-    if (!email || !password || !fullName || !role || !address) {
+    if (isEmailMissing || isPasswordMissing || isFullNameMissing || isRoleMissing || isAddressMissing) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
