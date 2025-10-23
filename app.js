@@ -26,7 +26,7 @@
         } else if (role === 'provider') {
           window.location.replace('provider-dashboard.html');
         } else {
-          // Fallback for seeker or any other role
+          // Fallback for owner or any other role
           window.location.replace('owner-dashboard.html');
         }
         
@@ -76,7 +76,7 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
         email: email,
         password: password,
         fullName: email.split('@')[0], // Use email username as default name
-        role: 'seeker', // Default role
+        role: 'owner', // Default role
         address: address // Include address attribute
       })
     });
@@ -174,7 +174,7 @@ document.getElementById("login-btn").addEventListener("click", async () => {
         console.log('➡️ Redirecting to provider-dashboard.html');
         window.location.href = 'provider-dashboard.html';
       } else {
-        // Fallback for any other role (seeker, etc.)
+        // Fallback for any other role (owner, etc.)
         console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
         window.location.href = 'owner-dashboard.html';
       }
@@ -441,7 +441,7 @@ async function handleConfirmation(email, verificationCode, codeInput, outputElem
               console.log('➡️ Redirecting to provider-dashboard.html');
               window.location.href = 'provider-dashboard.html';
             } else {
-              // Fallback for any other role (seeker, etc.)
+              // Fallback for any other role (owner, etc.)
               console.log('➡️ Redirecting to owner-dashboard.html (fallback)');
               window.location.href = 'owner-dashboard.html';
             }

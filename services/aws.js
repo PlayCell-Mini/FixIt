@@ -52,6 +52,7 @@ class AWSServices {
     }
 
     const tableName = this.tables.users;
+    // Use the correct userType mapping: 'provider' for providers, 'owner' for owners
     const pk = userType === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
     
     // CRITICAL CHECK: Ensure PK is valid
@@ -68,7 +69,7 @@ class AWSServices {
       SK: 'PROFILE#INFO',  // Sort Key - consistent for profile data
       userId: userId,      // Add userId as a separate field
       UserID: userId,      // Add UserID to satisfy DynamoDB schema requirements
-      userType: userType,
+      userType: userType,  // This will be 'owner' or 'provider'
       ...userData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

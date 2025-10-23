@@ -573,10 +573,23 @@ class AWSService {
     const userData = localStorage.getItem('userData');
     if (userData) {
       try {
-        this.currentUser = JSON.parse(userData);
-        return this.currentUser;
+        const userData = JSON.parse(userData);
+        
+        if (!userData || !userData.userId) {
+          console.warn('⚠️ Invalid userData in localStorage - clearing and redirecting to login');
+          localStorage.clear();
+          window.location.href = 'login.html';
+          return null;
+        }
+        
+        // Ensure role defaults to 'owner' if not set
+        userData.role = userData.role || 'owner';
+        
+        return userData;
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('❌ Error parsing userData from localStorage:', error);
+        localStorage.clear();
+        window.location.href = 'login.html';
         return null;
       }
     }

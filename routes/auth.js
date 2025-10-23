@@ -61,11 +61,11 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    if (!['seeker', 'provider'].includes(role)) {
+    if (!['owner', 'provider'].includes(role)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid role',
-        message: 'Role must be either "seeker" or "provider"'
+        message: 'Role must be either "owner" or "provider"'
       });
     }
 

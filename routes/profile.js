@@ -36,7 +36,7 @@ const getUserRoleFromToken = async (accessToken) => {
       attributes[attr.Name] = attr.Value;
     });
     
-    return attributes['custom:role'] || 'seeker';
+    return attributes['custom:role'] || 'owner';
   } catch (error) {
     throw new Error('Invalid access token');
   }
