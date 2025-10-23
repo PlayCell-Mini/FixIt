@@ -230,11 +230,41 @@ router.post('/signup', async (req, res) => {
       console.log('🔧 Adding serviceType for provider:', providerServiceType);
     }
 
-    // CRITICAL: Restore Data Integrity - Save to DynamoDB using the correct method signature
+    // CRITICAL FINAL FIX: DynamoDB Write Failure 500 Error
+    // Bypass Service Helper and implement direct, safe DynamoDB put logic
     console.log('💾 Saving user data to DynamoDB with userId:', userId, 'role:', role);
-    await awsServices.saveUser(userId, userData, role);
-
-    console.log('✅ User data saved to DynamoDB successfully');
+    
+    // Get DynamoDB client directly from server
+    const dynamoDB = require('../server').dynamoDB;
+    const tableName = process.env.DYNAMODB_USERS_TABLE || 'FixIt';
+    
+    // Create proper PK/SK structure for single table design
+    const pk = role === 'provider' ? `PROVIDER#${userId}` : `USER#${userId}`;
+    
+    // Prepare item for DynamoDB
+    const item = {
+      PK: pk,
+      SK: 'PROFILE#INFO',
+      userId: userId,
+      userType: role,
+      ...userData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Direct DynamoDB put operation
+    const params = {
+      TableName: tableName,
+      Item: item
+    };
+    
+    try {
+      console.log('🔄 Attempting direct DynamoDB put operation...', JSON.stringify(params, null, 2));
+      await dynamoDB.put(params).promise();
+      console.log('✅ User data saved to DynamoDB successfully via direct put');
+    } catch (dynamoError) {
+      console.error('❌ DynamoDB Save Error:', dynamoError);
+      throw new Error(`Failed to save user data to DynamoDB: ${dynamoError.message}`);
+    }
 
     // CRITICAL: Ensure server returns 201 Created status upon successful registration
     res.status(201).json({
