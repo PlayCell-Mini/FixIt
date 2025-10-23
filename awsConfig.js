@@ -485,13 +485,17 @@ class AWSService {
    */
   async signUp(email, password, userData = {}) {
     try {
+      // CRITICAL LOGIN FIX: Enforce Email Case Consistency
+      // Convert email to lowercase to ensure consistency with Cognito stored value
+      const normalizedEmail = email.toLowerCase();
+      
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          email,
+          email: normalizedEmail,
           password,
           fullName: userData.fullName || '',
           role: userData.role || 'owner',
@@ -522,12 +526,16 @@ class AWSService {
    */
   async signIn(email, password) {
     try {
+      // CRITICAL LOGIN FIX: Enforce Email Case Consistency
+      // Convert email to lowercase to ensure consistency with Cognito stored value
+      const normalizedEmail = email.toLowerCase();
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: normalizedEmail, password })
       });
 
       const data = await response.json();
