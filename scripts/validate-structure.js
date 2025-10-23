@@ -88,7 +88,7 @@ function validateDataStructure() {
       Value: 'provider'
     },
     {
-      Name: 'custom:serviceType',
+      Name: 'custom:servicetype',
       Value: 'Plumber'
     }
   ];

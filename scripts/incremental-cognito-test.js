@@ -153,7 +153,7 @@ async function testSignupWithRoleAndServiceType() {
     console.log('\n❌ Some tests failed. Check the results above.');
     
     if (serviceStatus !== 201) {
-      console.log('\n💡 The issue seems to be specifically with custom:serviceType attribute.');
+      console.log('\n💡 The issue seems to be specifically with custom:servicetype attribute.');
       console.log('   This could be due to:');
       console.log('   1. The attribute not being properly defined in Cognito');
       console.log('   2. The attribute name not matching exactly (case sensitivity)');

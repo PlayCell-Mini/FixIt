@@ -112,13 +112,13 @@ router.post('/signup', async (req, res) => {
       console.log('🔧 Adding custom:role attribute:', role);
     }
 
-    // CRITICAL: Add custom:serviceType only for providers and only if present (and non-empty)
+    // CRITICAL: Add custom:servicetype only for providers and only if present (and non-empty)
     if (role === 'provider' && serviceType && serviceType.trim() !== '') {
       userAttributes.push({
-        Name: 'custom:serviceType',
+        Name: 'custom:servicetype',
         Value: serviceType.trim()
       });
-      console.log('🔧 Adding custom:serviceType attribute:', serviceType);
+      console.log('🔧 Adding custom:servicetype attribute:', serviceType);
     }
 
     // Filter out any attributes with empty values and prohibited attributes
@@ -301,7 +301,7 @@ router.post('/login', async (req, res) => {
       email: attributes.email || email,
       name: attributes.name || '',
       role: attributes['custom:role'] || 'seeker',
-      serviceType: attributes['custom:serviceType'] || null
+      serviceType: attributes['custom:servicetype'] || null
     };
 
     console.log('📋 User data:', userData);

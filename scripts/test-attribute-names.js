@@ -22,7 +22,7 @@ async function testAttributeNames() {
   
   // Different variations to test
   const variations = [
-    'custom:serviceType',
+    'custom:servicetype',
     'custom:servicetype',
     'custom:service_type',
     'custom:ServiceType',

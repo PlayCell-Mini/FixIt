@@ -40,18 +40,18 @@ async function testCognitoAttributes() {
     
     // Check specifically for our custom attributes
     const customRole = result.UserPool.SchemaAttributes.find(attr => attr.Name === 'custom:role');
-    const customServiceType = result.UserPool.SchemaAttributes.find(attr => attr.Name === 'custom:serviceType');
+    const customServiceType = result.UserPool.SchemaAttributes.find(attr => attr.Name === 'custom:servicetype');
     
     console.log('\nCustom Attribute Check:');
     console.log('custom:role:', customRole ? 'FOUND' : 'NOT FOUND');
-    console.log('custom:serviceType:', customServiceType ? 'FOUND' : 'NOT FOUND');
+    console.log('custom:servicetype:', customServiceType ? 'FOUND' : 'NOT FOUND');
     
     if (customRole) {
       console.log('custom:role details:', JSON.stringify(customRole, null, 2));
     }
     
     if (customServiceType) {
-      console.log('custom:serviceType details:', JSON.stringify(customServiceType, null, 2));
+      console.log('custom:servicetype details:', JSON.stringify(customServiceType, null, 2));
     }
     
   } catch (error) {
