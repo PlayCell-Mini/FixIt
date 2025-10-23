@@ -45,67 +45,8 @@
 // ==================== LOGIN FORM HANDLER ====================
 
 document.getElementById("signup-btn").addEventListener("click", async () => {
-  const email = document.getElementById("email-input").value.trim();
-  const password = document.getElementById("password-input").value;
-  const address = document.getElementById("address-input").value.trim();
-  const outputElement = document.getElementById("output");
-
-  // Validation
-  if (!email || !password) {
-    outputElement.innerHTML = "<p style='color: red;'>Please enter both email and password</p>";
-    return;
-  }
-
-  // Validate address is provided (required by Cognito)
-  if (!address) {
-    outputElement.innerHTML = "<p style='color: red;'>⚠️ Please fill in the address before proceeding. Address is required for sign-up.</p>";
-    return;
-  }
-
-  try {
-    // Show loading state
-    outputElement.innerHTML = "<p>Signing up...</p>";
-
-    // Make POST request to signup endpoint
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        fullName: email.split('@')[0], // Use email username as default name
-        role: 'owner', // Default role
-        address: address // Include address attribute
-      })
-    });
-
-    // New safer response reading logic
-    const contentType = response.headers.get('content-type');
-    let data = {};
-    if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-    } else {
-        // If server sends HTML/text, we catch the error here.
-        const errorText = await response.text();
-        throw new Error('Server sent invalid response format (HTML). Status: ' + response.status + ' - Check Server Logs.');
-    }
-
-    if (response.ok && data.success) {
-      // Success - show verification message
-      outputElement.innerHTML = `<p style='color: green;'>✅ Success! Check your email for verification code.</p>`;
-      console.log('Signup successful:', data);
-    } else {
-      // Error response from server
-      outputElement.innerHTML = `<p style='color: red;'>❌ Error: ${data.message || 'Signup failed'}</p>`;
-      console.error('Signup error:', data);
-    }
-  } catch (error) {
-    // Network or other error
-    outputElement.innerHTML = `<p style='color: red;'>❌ Error: ${error.message}</p>`;
-    console.error('Signup error:', error);
-  }
+  // Redirect to signup.html instead of using hardcoded form
+  window.location.href = 'signup.html';
 });
 
 // Login Button Handler
