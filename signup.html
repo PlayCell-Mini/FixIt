@@ -425,6 +425,8 @@
           serviceType: role === 'provider' ? serviceType.trim() : null
         };
         
+        // FINAL DIAGNOSTIC: Log the exact payload being sent to the backend
+        console.log('FRONTEND PAYLOAD SENT:', JSON.stringify(signupData, null, 2));
         console.log('📤 Signup data being sent:', signupData);
 
         // CRITICAL: Frontend Validation Check - Send data directly to backend API
