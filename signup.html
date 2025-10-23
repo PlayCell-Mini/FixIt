@@ -350,7 +350,7 @@
       const serviceType = selectedServiceTypeInput.value || '';
       
       // Log the values for debugging
-      console.log('📋 Form values:', { fullName, email, role, serviceType });
+      console.log('📋 Form values:', { fullName, email, role, serviceType, address });
 
       // Basic validation
       if (!fullName || !email || !password || !confirmPassword || !address || !role) {
@@ -415,9 +415,10 @@
       try {
         console.log('📝 Registering user via backend API...');
         
-        // CRITICAL: Log the data being sent to ensure serviceType is captured
+        // CRITICAL: Payload Match - Ensure the JSON payload is structured correctly
         const signupData = {
           fullName: fullName,
+          email: email,
           role: role,
           address: address,
           serviceType: role === 'provider' ? serviceType.trim() : null
@@ -425,20 +426,32 @@
         
         console.log('📤 Signup data being sent:', signupData);
 
-        // Sign up via backend API (creates user in Cognito User Pool)
-        const signUpResult = await aws.signUp(email, password, signupData);
+        // CRITICAL: Frontend Validation Check - Send data directly to backend API
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(signupData)
+        });
 
-        console.log('✅ User registered successfully!');
-        console.log('👤 User ID:', signUpResult.data.userId);
+        const data = await response.json();
 
-        // Show success message
-        showSuccess('Account created successfully! Please check your email to verify your account.');
-        signupButton.textContent = 'Account Created!';
-        signupButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
-        
-        setTimeout(() => {
-          window.location.href = 'login.html';
-        }, 3000);
+        if (response.ok && data.success) {
+          console.log('✅ User registered successfully!');
+          console.log('👤 User ID:', data.data.userId);
+
+          // Show success message
+          showSuccess('Account created successfully! Please check your email to verify your account.');
+          signupButton.textContent = 'Account Created!';
+          signupButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+          
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 3000);
+        } else {
+          throw new Error(data.message || 'Failed to register user');
+        }
 
       } catch (error) {
         setLoadingState(false);

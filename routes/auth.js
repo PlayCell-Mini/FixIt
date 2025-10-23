@@ -19,8 +19,9 @@ setTimeout(() => {
  *   email: string,
  *   password: string,
  *   fullName: string,
- *   role: 'seeker' | 'provider',
+ *   role: 'owner' | 'provider',
  *   serviceType?: string (required if role is provider)
+ *   address: string
  * }
  */
 router.post('/signup', async (req, res) => {
@@ -28,34 +29,18 @@ router.post('/signup', async (req, res) => {
     // CRITICAL: Log the raw request body for diagnostic purposes
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
     
+    // CRITICAL: Restore Payload - Ensure we're correctly retrieving all fields
     const { email, password, fullName, role, serviceType, address } = req.body;
     
     // CRITICAL: Log extracted values for diagnostic purposes
     console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
     
-    // CRITICAL: Ensure serviceType is properly handled for providers
-    let providerServiceType = null;
-    if (role === 'provider') {
-      // Handle both serviceType and servicetype (case variations)
-      providerServiceType = serviceType || req.body.servicetype || null;
-      console.log('🔧 Provider serviceType resolved to:', providerServiceType);
-    }
-
     // Validation
-    if (!email || !password || !fullName || !role) {
+    if (!email || !password || !fullName || !role || !address) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        message: 'email, password, fullName, and role are required'
-      });
-    }
-
-    // Validate address (required by Cognito User Pool)
-    if (!address || !address.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing address',
-        message: 'Address is required for sign-up'
+        message: 'email, password, fullName, role, and address are required'
       });
     }
 
@@ -83,9 +68,21 @@ router.post('/signup', async (req, res) => {
       });
     }
 
+    // Validate address (required by Cognito User Pool)
+    if (!address || !address.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing address',
+        message: 'Address is required for sign-up'
+      });
+    }
+
     // CRITICAL CHECK: Ensure serviceType is present if user is a provider
+    let providerServiceType = null;
     if (role === 'provider') {
-      // Use the resolved serviceType
+      // Handle both serviceType and servicetype (case variations)
+      providerServiceType = serviceType || req.body.servicetype || null;
+      
       if (!providerServiceType || typeof providerServiceType !== 'string' || providerServiceType.trim() === '') {
         return res.status(400).json({
           success: false,
@@ -93,8 +90,9 @@ router.post('/signup', async (req, res) => {
           message: 'Service type is required for providers'
         });
       }
-      // CRITICAL: Log serviceType validation for diagnostic purposes
-      console.log('🔍 Provider serviceType validation - serviceType:', JSON.stringify(providerServiceType), 'trimmed:', JSON.stringify(providerServiceType.trim()));
+      
+      providerServiceType = providerServiceType.trim();
+      console.log('🔧 Provider serviceType resolved to:', providerServiceType);
     }
 
     console.log('📝 Signing up user:', email, 'Role:', role, 'ServiceType:', providerServiceType);
@@ -139,31 +137,14 @@ router.post('/signup', async (req, res) => {
 
     // Rule b: custom:servicetype is only included if the value is non-empty
     // For providers, we've already validated that serviceType is present and non-empty
-    if (role === 'provider') {
-      // CRITICAL: For providers, we MUST have a service type
-      if (!providerServiceType || typeof providerServiceType !== 'string' || providerServiceType.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          error: 'Missing service type',
-          message: 'Service type is required for providers'
-        });
-      }
-      
+    if (role === 'provider' && providerServiceType) {
       // CRITICAL: Only add custom:servicetype if it's non-empty
-      const trimmedServiceType = providerServiceType.trim();
-      if (trimmedServiceType !== '') {
+      if (providerServiceType !== '') {
         userAttributes.push({
           Name: 'custom:servicetype',
-          Value: trimmedServiceType
+          Value: providerServiceType
         });
-        console.log('🔧 Adding custom:servicetype attribute with value:', trimmedServiceType);
-      } else {
-        // This should never happen due to earlier validation, but let's be extra safe
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid service type',
-          message: 'Service type cannot be empty for providers'
-        });
+        console.log('🔧 Adding custom:servicetype attribute with value:', providerServiceType);
       }
     }
 
