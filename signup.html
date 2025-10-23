@@ -379,10 +379,16 @@
         return;
       }
 
-      // Service type validation for providers
-      if (role === 'provider' && !serviceType) {
-        showError('Please select a service type');
-        return;
+      // CRITICAL VALIDATION: Service type validation for providers
+      if (role === 'provider') {
+        // Additional check to ensure serviceType is not empty
+        if (!serviceType || serviceType.trim() === '') {
+          showError('Please select a service type');
+          // Add visual indication to draw attention to the service type section
+          serviceTypeSection.style.border = '2px solid #e53e3e';
+          serviceTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
       }
 
       setLoadingState(true);
@@ -390,13 +396,18 @@
       try {
         console.log('📝 Registering user via backend API...');
         
-        // Sign up via backend API (creates user in Cognito User Pool)
-        const signUpResult = await aws.signUp(email, password, {
+        // CRITICAL: Log the data being sent to ensure serviceType is captured
+        const signupData = {
           fullName: fullName,
           role: role,
           address: address,
           serviceType: role === 'provider' ? serviceType : null
-        });
+        };
+        
+        console.log('📤 Signup data being sent:', signupData);
+
+        // Sign up via backend API (creates user in Cognito User Pool)
+        const signUpResult = await aws.signUp(email, password, signupData);
 
         console.log('✅ User registered successfully!');
         console.log('👤 User ID:', signUpResult.data.userId);

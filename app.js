@@ -1,4 +1,3 @@
-// Signup Button Handler
 // ==================== GLOBAL AUTH CHECK ====================
 // CRITICAL: Redirect authenticated users immediately before any other code runs
 (function() {
@@ -44,10 +43,15 @@
 
 // ==================== LOGIN FORM HANDLER ====================
 
-document.getElementById("signup-btn").addEventListener("click", async () => {
-  // Redirect to signup.html instead of using hardcoded form
-  window.location.href = 'signup.html';
-});
+// Only attach signup button handler if we're on index.html
+if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+  document.getElementById("signup-btn").addEventListener("click", async (e) => {
+    // Prevent default behavior if there is any
+    e.preventDefault();
+    // Redirect to signup.html instead of using hardcoded form
+    window.location.href = 'signup.html';
+  });
+}
 
 // Login Button Handler
 document.getElementById("login-btn").addEventListener("click", async () => {
