@@ -471,7 +471,7 @@ class AWSService {
           email,
           password,
           fullName: userData.fullName || '',
-          role: userData.role || 'seeker',
+          role: userData.role || 'owner',
           serviceType: userData.serviceType || null,
           address: userData.address || ''
         })
