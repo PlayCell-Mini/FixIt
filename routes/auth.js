@@ -122,22 +122,49 @@ router.post('/signup', async (req, res) => {
     // CRITICAL: Add custom attributes with FINAL conditional logic
     // Rule a: custom:role is always set to the user's role (provider or owner)
     if (role && role.trim() !== '') {
+      const trimmedRole = role.trim();
       userAttributes.push({
         Name: 'custom:role',
-        Value: role.trim() // This will be 'provider' for providers
+        Value: trimmedRole
       });
-      console.log('🔧 Adding custom:role attribute with value:', role.trim());
+      console.log('🔧 Adding custom:role attribute with value:', trimmedRole);
+    } else {
+      // This should never happen due to earlier validation, but let's be safe
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role',
+        message: 'Role is required and cannot be empty'
+      });
     }
 
     // Rule b: custom:servicetype is only included if the value is non-empty
     // For providers, we've already validated that serviceType is present and non-empty
-    if (role === 'provider' && providerServiceType && typeof providerServiceType === 'string' && providerServiceType.trim() !== '') {
+    if (role === 'provider') {
+      // CRITICAL: For providers, we MUST have a service type
+      if (!providerServiceType || typeof providerServiceType !== 'string' || providerServiceType.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing service type',
+          message: 'Service type is required for providers'
+        });
+      }
+      
+      // CRITICAL: Only add custom:servicetype if it's non-empty
       const trimmedServiceType = providerServiceType.trim();
-      userAttributes.push({
-        Name: 'custom:servicetype',
-        Value: trimmedServiceType
-      });
-      console.log('🔧 Adding custom:servicetype attribute with value:', trimmedServiceType);
+      if (trimmedServiceType !== '') {
+        userAttributes.push({
+          Name: 'custom:servicetype',
+          Value: trimmedServiceType
+        });
+        console.log('🔧 Adding custom:servicetype attribute with value:', trimmedServiceType);
+      } else {
+        // This should never happen due to earlier validation, but let's be extra safe
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid service type',
+          message: 'Service type cannot be empty for providers'
+        });
+      }
     }
 
     // CRITICAL: Log the raw userAttributes before filtering
@@ -271,13 +298,18 @@ router.post('/signup', async (req, res) => {
         });
       }
       
+      // Handle general errors with a safe fallback
       return res.status(500).json({
         success: false,
         code: 'SIGNUP_FAILED',
         message: 'Failed to register user. Please try again.',
-        details: error.code || error.message
+        details: error.code || error.message || 'Unknown error occurred'
       });
     }
+    
+    // If headers were already sent, we can't send another response
+    // But we should still log the error
+    console.error('CRITICAL: Headers already sent, cannot send error response:', error);
   }
 });
 
