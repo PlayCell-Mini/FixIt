@@ -45,14 +45,23 @@ class AWSService {
     };
   }
 
-  // Initialize AWS SDK (call this with temporary credentials from login)
-  async initializeWithTemporaryCredentials(credentials) {
+  // CRITICAL FIX: Dynamic initialization function
+  initDynamically() {
     try {
+      // Check localStorage for saved temporary credentials
+      const awsTempCredentials = localStorage.getItem('awsTempCredentials');
+      
+      if (!awsTempCredentials) {
+        throw new Error('Please login first to get temporary credentials.');
+      }
+      
+      const credentials = JSON.parse(awsTempCredentials);
+      
       if (!credentials || !credentials.accessKeyId || !credentials.secretAccessKey || !credentials.sessionToken) {
-        throw new Error('Invalid temporary credentials provided');
+        throw new Error('Please login first to get temporary credentials.');
       }
 
-      console.log('⚙️ Initializing AWS SDK with temporary credentials...');
+      console.log('⚙️ Dynamically initializing AWS SDK with temporary credentials...');
       console.log('⏰ Credentials expire at:', credentials.expiration);
 
       // Set temporary credentials from Cognito Identity Pool
@@ -79,7 +88,7 @@ class AWSService {
       this.credentialsExpiration = new Date(credentials.expiration);
       this.initialized = true;
 
-      console.log('✅ AWS Services initialized with temporary credentials');
+      console.log('✅ AWS Services dynamically initialized with temporary credentials');
       console.log('🔑 User has scoped access to S3 and DynamoDB');
       
       // Set up auto-refresh before expiration (5 minutes before)
@@ -87,15 +96,20 @@ class AWSService {
       
       return true;
     } catch (error) {
-      console.error('❌ AWS Initialization Error:', error);
-      throw new Error(`Failed to initialize AWS with temporary credentials: ${error.message}`);
+      console.error('❌ AWS Dynamic Initialization Error:', error);
+      throw new Error(`Failed to dynamically initialize AWS: ${error.message}`);
     }
   }
 
   // Check if AWS is initialized
   ensureInitialized() {
     if (!this.initialized) {
-      throw new Error('AWS Service not initialized. Please login first to get temporary credentials.');
+      // CRITICAL FIX: Try to initialize dynamically if not already initialized
+      try {
+        this.initDynamically();
+      } catch (error) {
+        throw new Error('AWS Service not initialized. Please login first to get temporary credentials.');
+      }
     }
 
     // Check if credentials are expired
@@ -403,6 +417,9 @@ class AWSService {
    * @returns {Promise<object>} - User data
    */
   async getUserProfile(userId, userType = 'user') {
+    // CRITICAL FIX: Ensure AWS is initialized before operation
+    this.ensureInitialized();
+    
     const tableName = userType === 'provider' 
       ? DYNAMODB_CONFIG.tables.providers 
       : DYNAMODB_CONFIG.tables.users;
@@ -418,6 +435,9 @@ class AWSService {
    * @returns {Promise<object>} - Updated user data
    */
   async updateUserProfile(userId, updates, userType = 'user') {
+    // CRITICAL FIX: Ensure AWS is initialized before operation
+    this.ensureInitialized();
+    
     const tableName = userType === 'provider' 
       ? DYNAMODB_CONFIG.tables.providers 
       : DYNAMODB_CONFIG.tables.users;
@@ -436,6 +456,9 @@ class AWSService {
    * @returns {Promise<void>}
    */
   async saveUserProfile(userId, userData, userType = 'user') {
+    // CRITICAL FIX: Ensure AWS is initialized before operation
+    this.ensureInitialized();
+    
     const tableName = userType === 'provider' 
       ? DYNAMODB_CONFIG.tables.providers 
       : DYNAMODB_CONFIG.tables.users;
@@ -522,6 +545,11 @@ class AWSService {
       localStorage.setItem('refreshToken', data.tokens.refreshToken);
       localStorage.setItem('identityId', data.identityId);
       
+      // CRITICAL FIX: Store AWS temporary credentials in localStorage
+      if (data.awsCredentials) {
+        localStorage.setItem('awsTempCredentials', JSON.stringify(data.awsCredentials));
+      }
+      
       // Store user data
       localStorage.setItem('userData', JSON.stringify(data.user));
       this.currentUser = data.user;
@@ -539,6 +567,57 @@ class AWSService {
   }
 
   /**
+   * Initialize with temporary credentials (used by signIn)
+   * @param {object} credentials - Temporary AWS credentials
+   * @returns {Promise<boolean>} - Success status
+   */
+  async initializeWithTemporaryCredentials(credentials) {
+    try {
+      if (!credentials || !credentials.accessKeyId || !credentials.secretAccessKey || !credentials.sessionToken) {
+        throw new Error('Invalid temporary credentials provided');
+      }
+
+      console.log('⚙️ Initializing AWS SDK with temporary credentials...');
+      console.log('⏰ Credentials expire at:', credentials.expiration);
+
+      // Set temporary credentials from Cognito Identity Pool
+      AWS.config.update({
+        region: this.config.region,
+        credentials: new AWS.Credentials({
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken
+        })
+      });
+
+      // Initialize service clients with temporary credentials
+      this.s3 = new AWS.S3({
+        region: S3_CONFIG.region,
+        params: { Bucket: S3_CONFIG.bucket }
+      });
+
+      this.dynamoDB = new AWS.DynamoDB.DocumentClient({
+        region: this.config.region
+      });
+
+      // Store credentials expiration for refresh logic
+      this.credentialsExpiration = new Date(credentials.expiration);
+      this.initialized = true;
+
+      console.log('✅ AWS Services initialized with temporary credentials');
+      console.log('🔑 User has scoped access to S3 and DynamoDB');
+      
+      // Set up auto-refresh before expiration (5 minutes before)
+      this.setupCredentialRefresh();
+      
+      return true;
+    } catch (error) {
+      console.error('❌ AWS Initialization Error:', error);
+      throw new Error(`Failed to initialize AWS with temporary credentials: ${error.message}`);
+    }
+  }
+
+  /**
    * Sign out user
    */
   signOut() {
@@ -548,6 +627,7 @@ class AWSService {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('identityId');
     localStorage.removeItem('userData');
+    localStorage.removeItem('awsTempCredentials'); // CRITICAL FIX: Remove AWS temp credentials
     
     // Clear AWS credentials
     if (this.refreshTimer) {

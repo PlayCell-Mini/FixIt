@@ -46,7 +46,7 @@
           <div class="sidebar-bottom">
             <a href="#" id="sidebarEditProfile" class="sidebar-link icon-only" title="Edit Profile" aria-label="Edit Profile">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
             </a>
@@ -190,6 +190,9 @@
           // Poll for updates every 30 seconds (or use AWS AppSync for real-time)
           setInterval(async () => {
             try {
+              // CRITICAL FIX: Dynamically initialize AWS before operation
+              aws.initDynamically();
+              
               const userData = await aws.getUserProfile(currentUser.userId, 'provider');
               if (userData && userData.profileURL) {
                 const img = document.getElementById('sidebarAvatarProvider');
@@ -344,6 +347,9 @@
 
       async loadUserProfile(user) {
         try {
+          // CRITICAL FIX: Dynamically initialize AWS before operation
+          aws.initDynamically();
+          
           // Fetch profile data from DynamoDB
           const profile = await aws.getUserProfile(user.userId, 'provider');
           
@@ -821,6 +827,14 @@
 
       // Pre-fill fields with current data when user logs in
       const initializeProfileForm = async () => {
+        // CRITICAL FIX: Dynamically initialize AWS before operation
+        try {
+          aws.initDynamically();
+        } catch (error) {
+          dashboard.showNotification('AWS not initialized: ' + error.message, 'error');
+          return;
+        }
+        
         // Get access token from localStorage
         const accessToken = localStorage.getItem('accessToken');
         if (!accessToken) {
@@ -900,6 +914,14 @@
 
       // STEP 2 & 3: Save profile with image upload
       saveBtn.addEventListener('click', async () => {
+        // CRITICAL FIX: Dynamically initialize AWS before operation
+        try {
+          aws.initDynamically();
+        } catch (error) {
+          dashboard.showNotification('AWS not initialized: ' + error.message, 'error');
+          return;
+        }
+        
         // Get access token from localStorage
         const accessToken = localStorage.getItem('accessToken');
         if (!accessToken) {

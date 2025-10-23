@@ -165,7 +165,14 @@ class APIClient {
    * @returns {Promise<any>} - { tokens, user, awsCredentials, identityId }
    */
   async login(email, password) {
-    return this.post('/api/auth/login', { email, password });
+    const response = await this.post('/api/auth/login', { email, password });
+    
+    // CRITICAL FIX: Store AWS temporary credentials in localStorage for dynamic initialization
+    if (response.success && response.awsCredentials) {
+      localStorage.setItem('awsTempCredentials', JSON.stringify(response.awsCredentials));
+    }
+    
+    return response;
   }
 
   /**
@@ -184,7 +191,14 @@ class APIClient {
    * @returns {Promise<any>} - { awsCredentials, identityId }
    */
   async refreshCredentials(idToken) {
-    return this.post('/api/auth/refresh', { idToken });
+    const response = await this.post('/api/auth/refresh', { idToken });
+    
+    // CRITICAL FIX: Update AWS temporary credentials in localStorage
+    if (response.success && response.awsCredentials) {
+      localStorage.setItem('awsTempCredentials', JSON.stringify(response.awsCredentials));
+    }
+    
+    return response;
   }
 
   // ==================== MARKETPLACE APIs ====================
