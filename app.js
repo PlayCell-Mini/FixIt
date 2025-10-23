@@ -59,15 +59,16 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
       directSignupForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Get form values
-        const fullName = document.getElementById('direct-fullname').value.trim();
-        const email = document.getElementById('direct-email').value.trim();
-        const password = document.getElementById('direct-password').value;
-        const address = document.getElementById('direct-address').value.trim();
-        const role = document.getElementById('direct-role').value;
+        // CRITICAL FIX: Implement Field Retrieval Override
+        // Replace the existing data retrieval logic with explicit checks
+        const fullName = (document.getElementById('direct-fullname') || {}).value.trim();
+        const email = (document.getElementById('direct-email') || {}).value.trim().toLowerCase();
+        const password = (document.getElementById('direct-password') || {}).value;
+        const address = (document.getElementById('direct-address') || {}).value.trim();
+        const role = (document.getElementById('direct-role') || {}).value;
         
         // CRITICAL: Retrieve the serviceType value directly from the hidden input
-        const serviceType = document.getElementById('selectedServiceTypeInput').value;
+        const serviceType = (document.getElementById('selectedServiceTypeInput') || {}).value;
         
         // Basic validation
         if (!fullName || !email || !password || !address || !role) {
@@ -104,7 +105,8 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         submitBtn.disabled = true;
         
         try {
-          // Prepare signup data
+          // CRITICAL FIX: Payload Finalization
+          // Ensure the final JSON payload sent in the fetch request uses these newly retrieved variables
           const signupData = {
             fullName: fullName,
             email: email,
