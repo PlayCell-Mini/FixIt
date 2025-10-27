@@ -661,80 +661,87 @@
           body: JSON.stringify(signupData)
         });
 
-        // robust JSON parsing: some backends return empty/non-JSON bodies on errors
+        // --- Robust response handling (FIX) ---
+        // Read response text once, try to parse JSON but tolerate non-JSON or empty body.
+        const rawText = await response.text();
         let data = {};
         try {
-          data = await response.json();
-        } catch (jsonErr) {
-          console.warn('Warning: response not JSON or empty body', jsonErr);
-          data = {};
+          data = rawText ? JSON.parse(rawText) : {};
+        } catch (parseErr) {
+          console.warn('Signup response not JSON:', parseErr, rawText);
+          data = { rawText };
         }
 
-        // Determine success / created / unconfirmed flags from backend response (robust)
-        const responseOk = response.ok === true;
-        const backendSaysSuccess = !!(data && (data.success === true));
-        const backendIndicatesCreated = !!(data && (data.user || (data.message && /created|created successfully/i.test(data.message))));
-        const backendIndicatesUnconfirmed = !!(data && (
-          data.code === 'USER_NOT_CONFIRMED' ||
-          data.code === 'UserNotConfirmedException' ||
-          data.error === 'UserNotConfirmedException' ||
-          (data.message && /verification|confirm|not confirmed/i.test(data.message))
-        ));
+        // Consider backend indicating success even if HTTP status is non-2xx:
+        const backendIndicatesSuccess =
+          (data && (data.success === true)) ||
+          (data && (data.code === 'USER_NOT_CONFIRMED')) ||
+          (data && (data.error === 'UserNotConfirmedException')) ||
+          (data && data.user && data.user.confirmationRequired) ||
+          (data && data.requiresConfirmation === true) ||
+          (data && data.message && /verification/i.test(data.message));
 
-        // Log backend raw result for debugging
-        console.log('📥 Backend response status:', response.status, 'response.ok:', responseOk);
-        console.log('📥 Backend parsed body:', data);
-        console.log('📥 Flags -> success:', backendSaysSuccess, 'created:', backendIndicatesCreated, 'unconfirmed:', backendIndicatesUnconfirmed);
-
-        // Treat as success if either HTTP OK with success OR backend indicates creation/unconfirmed
-        if (responseOk && backendSaysSuccess) {
-          // canonical success
-          console.log('✅ User registered successfully (ok & success)', data);
-
-          const needsConfirmation = data.code === 'USER_NOT_CONFIRMED' || data.requiresConfirmation === true || (data.user && data.user.confirmationRequired);
+        if (response.ok || backendIndicatesSuccess) {
+          console.log('✅ User registration accepted by backend (status or body).', { status: response.status, data });
 
           // Store password temporarily so we can try auto-login after verification
           sessionStorage.setItem('temp_signup_password', password);
 
+          // detect if needs confirmation (even when status not 200)
+          const needsConfirmation = backendIndicatesSuccess && (
+            data.code === 'USER_NOT_CONFIRMED' ||
+            data.error === 'UserNotConfirmedException' ||
+            data.requiresConfirmation === true ||
+            (data.user && data.user.confirmationRequired) ||
+            (data.message && /verification/i.test(data.message))
+          );
+
           if (needsConfirmation) {
             openVerificationModal(email);
             showSuccess('Account created. Enter the verification code sent to your email.');
             setLoadingState(false);
           } else {
+            // If backend truly created user and no confirmation required
             showSuccess('Account created successfully! Redirecting to login...');
             sessionStorage.removeItem('temp_signup_password');
-            setTimeout(() => {
-              window.location.href = 'login.html';
-            }, 1500);
-          }
-
-        } else if (!responseOk && (backendIndicatesCreated || backendIndicatesUnconfirmed || backendSaysSuccess)) {
-          // Special case: backend returned non-2xx but indicates user was created or needs confirmation.
-          console.warn('⚠️ Backend returned non-2xx but indicates user creation/unconfirmed. Handling as success.');
-          sessionStorage.setItem('temp_signup_password', password);
-
-          const needsConfirmation = backendIndicatesUnconfirmed || data.code === 'USER_NOT_CONFIRMED' || data.requiresConfirmation === true || (data.user && data.user.confirmationRequired);
-
-          if (needsConfirmation) {
-            openVerificationModal(email);
-            showSuccess('Account created. Enter the verification code sent to your email.');
             setLoadingState(false);
-          } else {
-            showSuccess('Account created successfully (backend returned non-2xx). Redirecting to login...');
-            sessionStorage.removeItem('temp_signup_password');
             setTimeout(() => {
               window.location.href = 'login.html';
             }, 1500);
           }
 
         } else {
-          // Normal failure path - map known codes when possible
-          const serverMessage = (data && (data.message || data.error || data.code)) || 'Failed to register user';
-          // If the backend reports username exists, show friendly message
-          if ((data && (data.code === 'UsernameExistsException' || (data.message && /username.*exists/i.test(data.message)))) || /already exists/i.test(serverMessage)) {
-            throw new Error('An account with this email already exists.');
+          // Not ok and backend did NOT indicate success — map known cognito error codes if present
+          console.warn('Backend returned non-ok and did not indicate success:', response.status, data);
+
+          // Map server/Cognito style errors to friendly messages
+          if (data) {
+            // Username already exists
+            if (data.code === 'UsernameExistsException' || data.error === 'UsernameExistsException' || (data.message && /already exists|exists/i.test(data.message))) {
+              throw new Error('An account with this email already exists.');
+            }
+
+            // Invalid parameter (email format etc)
+            if (data.code === 'InvalidParameterException' || data.error === 'InvalidParameterException' || (data.message && /invalid parameter/i.test(data.message))) {
+              throw new Error('Please enter a valid email address.');
+            }
+
+            if (data.code === 'InvalidPasswordException' || data.error === 'InvalidPasswordException') {
+              throw new Error('Password is too weak. Please choose a stronger password.');
+            }
+
+            if (data.code === 'TooManyRequestsException' || data.error === 'TooManyRequestsException') {
+              throw new Error('Too many requests. Please try again later.');
+            }
+
+            // If server sent a clear message, use it
+            if (data.message) {
+              throw new Error(data.message);
+            }
           }
-          throw new Error(serverMessage);
+
+          // Generic fallback with HTTP status
+          throw new Error('Failed to register user. Server returned status ' + response.status);
         }
 
       } catch (error) {
@@ -743,27 +750,36 @@
         // Handle specific error messages
         let errorMessage = 'An error occurred. Please try again.';
         
-        // AWS Cognito error codes or thrown messages
+        // If it's an Error object with message, prefer that
         if (error && error.message) {
-          const msg = error.message;
-          if (/UsernameExistsException|already exists/i.test(msg)) {
-            errorMessage = 'An account with this email already exists.';
-          } else if (/InvalidParameterException|invalid email/i.test(msg)) {
-            errorMessage = 'Please enter a valid email address.';
-          } else if (/InvalidPasswordException|Password is too weak/i.test(msg)) {
-            errorMessage = 'Password is too weak. Please choose a stronger password.';
-          } else if (/TooManyRequestsException|Too many requests/i.test(msg)) {
-            errorMessage = 'Too many requests. Please try again later.';
-          } else if (/NetworkError/i.test(msg)) {
-            errorMessage = 'Network error. Please check your connection.';
-          } else {
-            errorMessage = msg;
-          }
-        } else {
-          // fallback
-          errorMessage = error || errorMessage;
+          errorMessage = error.message;
+        } else if (error && typeof error === 'string') {
+          errorMessage = error;
         }
         
+        // AWS Cognito error codes (in case some code object passed through)
+        if (error && error.code) {
+          switch (error.code) {
+            case 'UsernameExistsException':
+              errorMessage = 'An account with this email already exists.';
+              break;
+            case 'InvalidParameterException':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+            case 'InvalidPasswordException':
+              errorMessage = 'Password is too weak. Please choose a stronger password.';
+              break;
+            case 'TooManyRequestsException':
+              errorMessage = 'Too many requests. Please try again later.';
+              break;
+            case 'NetworkError':
+              errorMessage = 'Network error. Please check your connection.';
+              break;
+            default:
+              errorMessage = error.message || errorMessage;
+          }
+        }
+
         showError(errorMessage);
       }
     });
