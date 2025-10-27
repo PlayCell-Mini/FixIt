@@ -661,25 +661,46 @@
           body: JSON.stringify(signupData)
         });
 
-        const data = await response.json();
+        // robust JSON parsing: some backends return empty/non-JSON bodies on errors
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (jsonErr) {
+          console.warn('Warning: response not JSON or empty body', jsonErr);
+          data = {};
+        }
 
-        // if backend indicates success but requires confirmation
-        if (response.ok && data.success) {
-          console.log('✅ User registered successfully!', data);
+        // Determine success / created / unconfirmed flags from backend response (robust)
+        const responseOk = response.ok === true;
+        const backendSaysSuccess = !!(data && (data.success === true));
+        const backendIndicatesCreated = !!(data && (data.user || (data.message && /created|created successfully/i.test(data.message))));
+        const backendIndicatesUnconfirmed = !!(data && (
+          data.code === 'USER_NOT_CONFIRMED' ||
+          data.code === 'UserNotConfirmedException' ||
+          data.error === 'UserNotConfirmedException' ||
+          (data.message && /verification|confirm|not confirmed/i.test(data.message))
+        ));
 
-          // If backend says the user must confirm (common pattern)
-          const needsConfirmation = data.code === 'USER_NOT_CONFIRMED' || data.requiresConfirmation === true || data.user && data.user.confirmationRequired;
+        // Log backend raw result for debugging
+        console.log('📥 Backend response status:', response.status, 'response.ok:', responseOk);
+        console.log('📥 Backend parsed body:', data);
+        console.log('📥 Flags -> success:', backendSaysSuccess, 'created:', backendIndicatesCreated, 'unconfirmed:', backendIndicatesUnconfirmed);
+
+        // Treat as success if either HTTP OK with success OR backend indicates creation/unconfirmed
+        if (responseOk && backendSaysSuccess) {
+          // canonical success
+          console.log('✅ User registered successfully (ok & success)', data);
+
+          const needsConfirmation = data.code === 'USER_NOT_CONFIRMED' || data.requiresConfirmation === true || (data.user && data.user.confirmationRequired);
 
           // Store password temporarily so we can try auto-login after verification
           sessionStorage.setItem('temp_signup_password', password);
 
           if (needsConfirmation) {
-            // Open verification modal with provided email
             openVerificationModal(email);
             showSuccess('Account created. Enter the verification code sent to your email.');
             setLoadingState(false);
           } else {
-            // If user is created and no confirmation needed, proceed to show success and redirect
             showSuccess('Account created successfully! Redirecting to login...');
             sessionStorage.removeItem('temp_signup_password');
             setTimeout(() => {
@@ -687,16 +708,33 @@
             }, 1500);
           }
 
-        } else {
-          // If server returned a clear "user not confirmed" message but response not 200, still show modal
-          if (data && (data.code === 'USER_NOT_CONFIRMED' || data.error === 'UserNotConfirmedException' || (data.message && data.message.toLowerCase().includes('verification')))) {
-            sessionStorage.setItem('temp_signup_password', password);
+        } else if (!responseOk && (backendIndicatesCreated || backendIndicatesUnconfirmed || backendSaysSuccess)) {
+          // Special case: backend returned non-2xx but indicates user was created or needs confirmation.
+          console.warn('⚠️ Backend returned non-2xx but indicates user creation/unconfirmed. Handling as success.');
+          sessionStorage.setItem('temp_signup_password', password);
+
+          const needsConfirmation = backendIndicatesUnconfirmed || data.code === 'USER_NOT_CONFIRMED' || data.requiresConfirmation === true || (data.user && data.user.confirmationRequired);
+
+          if (needsConfirmation) {
             openVerificationModal(email);
             showSuccess('Account created. Enter the verification code sent to your email.');
             setLoadingState(false);
           } else {
-            throw new Error(data.message || 'Failed to register user');
+            showSuccess('Account created successfully (backend returned non-2xx). Redirecting to login...');
+            sessionStorage.removeItem('temp_signup_password');
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 1500);
           }
+
+        } else {
+          // Normal failure path - map known codes when possible
+          const serverMessage = (data && (data.message || data.error || data.code)) || 'Failed to register user';
+          // If the backend reports username exists, show friendly message
+          if ((data && (data.code === 'UsernameExistsException' || (data.message && /username.*exists/i.test(data.message)))) || /already exists/i.test(serverMessage)) {
+            throw new Error('An account with this email already exists.');
+          }
+          throw new Error(serverMessage);
         }
 
       } catch (error) {
@@ -705,29 +743,25 @@
         // Handle specific error messages
         let errorMessage = 'An error occurred. Please try again.';
         
-        // AWS Cognito error codes
-        if (error.code) {
-          switch (error.code) {
-            case 'UsernameExistsException':
-              errorMessage = 'An account with this email already exists.';
-              break;
-            case 'InvalidParameterException':
-              errorMessage = 'Please enter a valid email address.';
-              break;
-            case 'InvalidPasswordException':
-              errorMessage = 'Password is too weak. Please choose a stronger password.';
-              break;
-            case 'TooManyRequestsException':
-              errorMessage = 'Too many requests. Please try again later.';
-              break;
-            case 'NetworkError':
-              errorMessage = 'Network error. Please check your connection.';
-              break;
-            default:
-              errorMessage = error.message || errorMessage;
+        // AWS Cognito error codes or thrown messages
+        if (error && error.message) {
+          const msg = error.message;
+          if (/UsernameExistsException|already exists/i.test(msg)) {
+            errorMessage = 'An account with this email already exists.';
+          } else if (/InvalidParameterException|invalid email/i.test(msg)) {
+            errorMessage = 'Please enter a valid email address.';
+          } else if (/InvalidPasswordException|Password is too weak/i.test(msg)) {
+            errorMessage = 'Password is too weak. Please choose a stronger password.';
+          } else if (/TooManyRequestsException|Too many requests/i.test(msg)) {
+            errorMessage = 'Too many requests. Please try again later.';
+          } else if (/NetworkError/i.test(msg)) {
+            errorMessage = 'Network error. Please check your connection.';
+          } else {
+            errorMessage = msg;
           }
         } else {
-          errorMessage = error.message || errorMessage;
+          // fallback
+          errorMessage = error || errorMessage;
         }
         
         showError(errorMessage);
