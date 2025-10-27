@@ -7,6 +7,61 @@
   <link rel="stylesheet" href="style.css" />
   <!-- Google Fonts for better typography -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Minimal styles for verification modal */
+    .verif-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .verif-modal {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      box-sizing: border-box;
+      transform: translateY(10px);
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    .verif-overlay.show { display: flex; }
+    .verif-modal h3 { margin: 0 0 8px 0; font-size: 20px; }
+    .verif-modal p { margin: 0 0 14px 0; color: #555; font-size: 14px; }
+    .verif-code-input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 20px;
+      letter-spacing: 6px;
+      text-align: center;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+    .verif-actions {
+      margin-top: 14px;
+      display:flex;
+      gap:10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .verif-btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .verif-btn.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+    .verif-btn.ghost { background: transparent; color: #333; border: 1px solid #e6e6e6; }
+    .verif-resend { font-size: 13px; color: #666; text-decoration: underline; background: none; border: none; cursor: pointer; }
+    .small-muted { font-size: 13px; color: #777; margin-top:8px; text-align:center; }
+  </style>
 </head>
 <body>
   <div class="login-container">
@@ -142,6 +197,29 @@
     </div>
   </div>
 
+  <!-- Verification Modal (hidden by default) -->
+  <div id="verifOverlay" class="verif-overlay" aria-hidden="true">
+    <div class="verif-modal" role="dialog" aria-modal="true" aria-labelledby="verifTitle">
+      <div style="text-align:center; margin-bottom:10px;">
+        <div style="font-size:34px;">📧</div>
+      </div>
+      <h3 id="verifTitle">Email Verification Required</h3>
+      <p id="verifSubtitle">We sent a 6-digit code to your email <strong id="verifEmailText"></strong></p>
+
+      <input type="text" id="verifCodeInput" class="verif-code-input" placeholder="Enter 6-digit code" maxlength="6" autocomplete="off" inputmode="numeric" />
+
+      <div class="small-muted" id="verifMessage">Check your inbox (and spam). The code expires in a few minutes.</div>
+
+      <div class="verif-actions">
+        <button id="verifConfirmBtn" class="verif-btn primary">✅ Verify Email</button>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+          <button id="verifResendBtn" class="verif-resend">Resend Code</button>
+          <button id="verifCancelBtn" class="verif-btn ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- AWS SDK for Browser -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
   <script src="awsConfig.js"></script>
@@ -163,6 +241,14 @@
     const serviceTypeSection = document.getElementById('serviceTypeSection');
     const serviceOptions = document.querySelectorAll('.service-option');
     const selectedServiceTypeInput = document.getElementById('selectedServiceType');
+
+    const verifOverlay = document.getElementById('verifOverlay');
+    const verifEmailText = document.getElementById('verifEmailText');
+    const verifCodeInput = document.getElementById('verifCodeInput');
+    const verifConfirmBtn = document.getElementById('verifConfirmBtn');
+    const verifResendBtn = document.getElementById('verifResendBtn');
+    const verifCancelBtn = document.getElementById('verifCancelBtn');
+    const verifMessage = document.getElementById('verifMessage');
 
     // Function to control visibility of service type section based on role selection
     function toggleServiceTypeSection() {
@@ -335,6 +421,143 @@
     confirmPasswordInput.addEventListener('input', validatePasswordMatch);
     passwordInput.addEventListener('input', validatePasswordMatch);
 
+    // Verification modal controls
+    function openVerificationModal(email) {
+      verifEmailText.textContent = email;
+      verifCodeInput.value = '';
+      verifMessage.textContent = 'Check your inbox (and spam). The code expires in a few minutes.';
+      verifOverlay.classList.add('show');
+      verifOverlay.setAttribute('aria-hidden', 'false');
+      setTimeout(() => verifCodeInput.focus(), 80);
+    }
+
+    function closeVerificationModal() {
+      verifOverlay.classList.remove('show');
+      verifOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    // Resend code
+    async function resendVerificationCode(email) {
+      try {
+        verifResendBtn.disabled = true;
+        verifResendBtn.textContent = 'Resending...';
+        const res = await fetch('/api/auth/resend-confirmation', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          verifMessage.textContent = '✅ Code resent. Check your inbox.';
+        } else {
+          verifMessage.textContent = '❌ ' + (d.message || 'Failed to resend. Try again later.');
+        }
+      } catch (err) {
+        verifMessage.textContent = '❌ Network error. Try again.';
+        console.error('Resend error', err);
+      } finally {
+        verifResendBtn.disabled = false;
+        verifResendBtn.textContent = 'Resend Code';
+      }
+    }
+
+    // Setup verification listeners
+    verifConfirmBtn.addEventListener('click', async () => {
+      const email = verifEmailText.textContent;
+      await handleVerificationFromSignup(email);
+    });
+
+    verifCodeInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const email = verifEmailText.textContent;
+        await handleVerificationFromSignup(email);
+      }
+    });
+
+    verifResendBtn.addEventListener('click', () => {
+      const email = verifEmailText.textContent;
+      resendVerificationCode(email);
+    });
+
+    verifCancelBtn.addEventListener('click', () => {
+      closeVerificationModal();
+    });
+
+    // Handle confirmation and auto-login (used by modal after signup)
+    async function handleVerificationFromSignup(email) {
+      const verificationCode = verifCodeInput.value.trim();
+      if (!verificationCode || verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
+        verifMessage.textContent = '❌ Please enter a valid 6-digit code';
+        return;
+      }
+
+      verifConfirmBtn.disabled = true;
+      verifConfirmBtn.textContent = '⏳ Verifying...';
+
+      try {
+        const response = await fetch('/api/auth/confirm', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email, verificationCode })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          verifMessage.textContent = '✅ Verified successfully! Logging in...';
+
+          // try auto-login if we stored password in sessionStorage
+          const tempPassword = sessionStorage.getItem('temp_signup_password');
+          if (tempPassword) {
+            // Attempt login automatically
+            const loginResp = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ email, password: tempPassword })
+            });
+            const loginData = await loginResp.json();
+
+            if (loginResp.ok && loginData.success) {
+              // Save tokens & redirect (same as login.html)
+              localStorage.setItem('accessToken', loginData.tokens.accessToken);
+              localStorage.setItem('idToken', loginData.tokens.idToken);
+              localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
+              localStorage.setItem('userData', JSON.stringify(loginData.user));
+              if (loginData.awsCredentials) {
+                localStorage.setItem('awsTempCredentials', JSON.stringify(loginData.awsCredentials));
+              }
+              sessionStorage.removeItem('temp_signup_password');
+
+              // Role-based redirect
+              const role = loginData.user.role;
+              if (role === 'owner') window.location.replace('owner-dashboard.html');
+              else if (role === 'provider') window.location.replace('provider-dashboard.html');
+              else window.location.replace('owner-dashboard.html');
+            } else {
+              // Verified but auto-login failed
+              closeVerificationModal();
+              showSuccess('Email verified. Please log in with your credentials.');
+              sessionStorage.removeItem('temp_signup_password');
+              setTimeout(() => window.location.replace('login.html'), 1800);
+            }
+          } else {
+            // No temp password stored — direct the user to login
+            closeVerificationModal();
+            showSuccess('Email verified. Please log in with your credentials.');
+            setTimeout(() => window.location.replace('login.html'), 1800);
+          }
+        } else {
+          verifMessage.textContent = '❌ ' + (data.message || 'Verification failed');
+          verifConfirmBtn.disabled = false;
+          verifConfirmBtn.textContent = '✅ Verify Email';
+        }
+      } catch (err) {
+        console.error('Verification error', err);
+        verifMessage.textContent = '❌ Network error. Try again.';
+        verifConfirmBtn.disabled = false;
+        verifConfirmBtn.textContent = '✅ Verify Email';
+      }
+    }
+
     // Form submission handler
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -440,20 +663,40 @@
 
         const data = await response.json();
 
+        // if backend indicates success but requires confirmation
         if (response.ok && data.success) {
-          console.log('✅ User registered successfully!');
-          console.log('👤 User ID:', data.data.userId);
+          console.log('✅ User registered successfully!', data);
 
-          // Show success message
-          showSuccess('Account created successfully! Please check your email to verify your account.');
-          signupButton.textContent = 'Account Created!';
-          signupButton.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
-          
-          setTimeout(() => {
-            window.location.href = 'login.html';
-          }, 3000);
+          // If backend says the user must confirm (common pattern)
+          const needsConfirmation = data.code === 'USER_NOT_CONFIRMED' || data.requiresConfirmation === true || data.user && data.user.confirmationRequired;
+
+          // Store password temporarily so we can try auto-login after verification
+          sessionStorage.setItem('temp_signup_password', password);
+
+          if (needsConfirmation) {
+            // Open verification modal with provided email
+            openVerificationModal(email);
+            showSuccess('Account created. Enter the verification code sent to your email.');
+            setLoadingState(false);
+          } else {
+            // If user is created and no confirmation needed, proceed to show success and redirect
+            showSuccess('Account created successfully! Redirecting to login...');
+            sessionStorage.removeItem('temp_signup_password');
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 1500);
+          }
+
         } else {
-          throw new Error(data.message || 'Failed to register user');
+          // If server returned a clear "user not confirmed" message but response not 200, still show modal
+          if (data && (data.code === 'USER_NOT_CONFIRMED' || data.error === 'UserNotConfirmedException' || (data.message && data.message.toLowerCase().includes('verification')))) {
+            sessionStorage.setItem('temp_signup_password', password);
+            openVerificationModal(email);
+            showSuccess('Account created. Enter the verification code sent to your email.');
+            setLoadingState(false);
+          } else {
+            throw new Error(data.message || 'Failed to register user');
+          }
         }
 
       } catch (error) {

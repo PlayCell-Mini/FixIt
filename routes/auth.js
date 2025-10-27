@@ -2,10 +2,18 @@
 const express = require('express');
 const router = express.Router();
 
-// Get AWS services from server directly (removed setTimeout pattern)
-const cognito = require('../server').cognito;
-const cognitoIdentity = require('../server').cognitoIdentity;
-const awsServices = require('../server').awsServices;
+// Get AWS services from server
+let cognito, cognitoIdentity, awsServices;
+// CRITICAL: Delay loading to ensure server initialization is complete
+setTimeout(() => {
+  try {
+    cognito = require('../server').cognito;
+    cognitoIdentity = require('../server').cognitoIdentity;
+    awsServices = require('../server').awsServices;
+  } catch (e) {
+    console.error("❌ Failed to load AWS services from server:", e.message);
+  }
+}, 100);
 
 /**
  * Helper function to send detailed 400 response for missing fields
@@ -14,7 +22,7 @@ function sendMissingFieldsError(res, fields) {
   const missing = Object.keys(fields).filter(key => fields[key]);
   
   if (missing.length > 0) {
-    console.log('❌ Missing fields detected:', fields);
+    console.log('❌ Missing fields detected:', missing);
     return res.status(400).json({
       success: false,
       code: 'MISSING_FIELDS',
@@ -43,20 +51,20 @@ router.post('/signup', async (req, res) => {
     // CRITICAL: Log the raw request body for diagnostic purposes
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
     
-    // CRITICAL: Restore Payload - Ensure we're correctly retrieving all fields
-    // Use the full req.body access to ensure we catch any null/undefined values and trim strings immediately.
-    const email = req.body.email ? req.body.email.trim() : null;
+    // CRITICAL FIX: Robust Data Extraction - Ensure all fields are correctly retrieved and trimmed
+    // This uses direct req.body access for maximum compatibility with Express middleware.
+    const email = (req.body.email && typeof req.body.email === 'string') ? req.body.email.trim().toLowerCase() : null;
     const password = req.body.password || null;
-    const fullName = req.body.fullName ? req.body.fullName.trim() : null;
-    const role = req.body.role || null;
-    const address = req.body.address ? req.body.address.trim() : null;
-    const serviceType = req.body.serviceType || req.body.servicetype || null; // Capture both cases
+    const fullName = (req.body.fullName && typeof req.body.fullName === 'string') ? req.body.fullName.trim() : null;
+    const role = (req.body.role && typeof req.body.role === 'string') ? req.body.role.trim() : null;
+    const address = (req.body.address && typeof req.body.address === 'string') ? req.body.address.trim() : null;
+    // Capture serviceType (checking for both 'serviceType' and 'servicetype')
+    const serviceType = req.body.serviceType || req.body.servicetype || null; 
     
     // CRITICAL: Log extracted values for diagnostic purposes
-    console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address);
+    console.log('📥 Extracted values - email:', email, 'role:', role, 'serviceType:', serviceType, 'address:', address, 'password set:', !!password);
     
     // Explicit validation to ensure all required fields are present
-    // Note: Checking against the variables derived above, where "" is treated as null.
     const missingFields = {
         fullName: !fullName,
         email: !email,
@@ -70,7 +78,7 @@ router.post('/signup', async (req, res) => {
     if (missingError) return missingError;
 
 
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    if (!email.match(/^[^\s@]+@[^\^\s@]+\.[^\s@]+$/)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid email',
@@ -328,12 +336,7 @@ router.post('/signup', async (req, res) => {
         code: 'SIGNUP_FAILED',
         message: 'Failed to register user. Please try again.',
         details: error.code || error.message || 'Unknown error occurred'
-      });
-    }
-    
-    // If headers were already sent, we can't send another response
-    // But we should still log the error
-    console.error('CRITICAL: Headers already sent, cannot send error response:', error);
+    });
   }
 });
 
@@ -720,19 +723,15 @@ router.post('/confirm', async (req, res) => {
     // Specific error handling
     if (error.code === 'CodeMismatchException') {
       errorMessage = 'Invalid verification code. Please check the code and try again.';
-      errorCode = 'INVALID_CODE';
       statusCode = 400;
     } else if (error.code === 'ExpiredCodeException') {
       errorMessage = 'Verification code has expired. Please request a new code.';
-      errorCode = 'EXPIRED_CODE';
       statusCode = 400;
     } else if (error.code === 'NotAuthorizedException') {
       errorMessage = 'User is already confirmed.';
-      errorCode = 'ALREADY_CONFIRMED';
       statusCode = 400;
     } else if (error.code === 'UserNotFoundException') {
       errorMessage = 'User not found.';
-      errorCode = 'USER_NOT_FOUND';
       statusCode = 404;
     }
 
