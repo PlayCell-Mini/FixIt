@@ -393,6 +393,9 @@ router.post('/signup', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
   try {
+    // Initialize AWS services
+    initializeAWSServices();
+    
     const { email, password } = req.body;
 
     // Validation
