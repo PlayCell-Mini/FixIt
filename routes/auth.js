@@ -4,7 +4,7 @@ const router = express.Router();
 const AWS = require('aws-sdk');
 
 // Lazy initialize AWS services
-let cognito, cognitoIdentity, awsServices;
+let cognito, cognitoIdentity;
 
 function initializeAWSServices() {
   if (!cognito) {
@@ -21,25 +21,6 @@ function initializeAWSServices() {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
     });
-  }
-  
-  if (!awsServices) {
-    // Import AWS service helper
-    const AWSServices = require('../services/aws');
-    awsServices = new AWSServices(
-      new AWS.DynamoDB.DocumentClient({
-        region: process.env.AWS_REGION,
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-      }),
-      new AWS.S3({
-        region: process.env.AWS_REGION,
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-      }),
-      cognito,
-      cognitoIdentity
-    );
   }
 }
 
@@ -262,16 +243,13 @@ router.post('/signup', async (req, res) => {
     }
 
     // CRITICAL SYNTAX FIX FOR 500 ERROR
-    // Get DynamoDB client directly from server with proper error handling
-    let dynamoDB;
-    try {
-      if (!dynamoDB) {
-        throw new Error('DynamoDB client not available from server module');
-      }
-    } catch (importError) {
-      console.error('❌ Failed to import DynamoDB client:', importError);
-      throw new Error('Failed to initialize DynamoDB client');
-    }
+    // Get DynamoDB client directly
+    initializeAWSServices();
+    const dynamoDB = new AWS.DynamoDB.DocumentClient({
+      region: process.env.AWS_REGION,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    });
     
     // Get table name from environment variables
     const tableName = process.env.DYNAMODB_USERS_TABLE || 'FixIt';
@@ -562,6 +540,9 @@ router.post('/login', async (req, res) => {
  */
 router.post('/refresh', async (req, res) => {
   try {
+    // Initialize AWS services
+    initializeAWSServices();
+    
     const { idToken } = req.body;
 
     if (!idToken) {
@@ -642,6 +623,9 @@ router.post('/refresh', async (req, res) => {
  */
 router.post('/verify', async (req, res) => {
   try {
+    // Initialize AWS services
+    initializeAWSServices();
+    
     const { email, code } = req.body;
 
     if (!email || !code) {
@@ -716,6 +700,9 @@ router.post('/verify', async (req, res) => {
  */
 router.post('/confirm', async (req, res) => {
   try {
+    // Initialize AWS services
+    initializeAWSServices();
+    
     const { email, verificationCode } = req.body;
 
     if (!email || !verificationCode) {
@@ -779,4 +766,3 @@ router.post('/confirm', async (req, res) => {
 });
 
 module.exports = router;
-});
