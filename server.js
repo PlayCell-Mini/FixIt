@@ -58,17 +58,15 @@ module.exports.cognitoIdentity = cognitoIdentity;
 module.exports.awsServices = awsServices;
 
 // API Routes
-const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
 const marketplaceRoutes = require('./routes/marketplace');
 const uploadRoutes = require('./routes/upload');
-const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 
-app.use('/api', apiRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api', marketplaceRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api', profileRoutes);
-app.use('/api/auth', authRoutes);
 
 // Serve index.html on root
 app.get('/', (req, res) => {

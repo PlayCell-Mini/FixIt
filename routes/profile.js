@@ -4,11 +4,9 @@ const router = express.Router();
 const AWS = require('aws-sdk');
 
 // Get AWS services from server
-let dynamoDB, cognito;
-setTimeout(() => {
-  dynamoDB = require('../server').dynamoDB;
-  cognito = require('../server').cognito;
-}, 100);
+const server = require('../server');
+const dynamoDB = server.dynamoDB;
+const cognito = server.cognito;
 
 // Helper function to extract user ID from access token
 const getUserIdFromToken = async (accessToken) => {

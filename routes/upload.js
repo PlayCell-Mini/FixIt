@@ -20,10 +20,7 @@ const upload = multer({
 });
 
 // Get AWS services from server
-let awsServices;
-setTimeout(() => {
-  awsServices = require('../server').awsServices;
-}, 100);
+const awsServices = require('../server').awsServices;
 
 /**
  * POST /api/upload

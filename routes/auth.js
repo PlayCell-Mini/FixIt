@@ -1,19 +1,47 @@
-// Authentication API Routes with Cognito Identity Pool Integration
+// Authentication API Routes
 const express = require('express');
 const router = express.Router();
+const AWS = require('aws-sdk');
 
-// Get AWS services from server
+// Lazy initialize AWS services
 let cognito, cognitoIdentity, awsServices;
-// CRITICAL: Delay loading to ensure server initialization is complete
-setTimeout(() => {
-  try {
-    cognito = require('../server').cognito;
-    cognitoIdentity = require('../server').cognitoIdentity;
-    awsServices = require('../server').awsServices;
-  } catch (e) {
-    console.error("❌ Failed to load AWS services from server:", e.message);
+
+function initializeAWSServices() {
+  if (!cognito) {
+    cognito = new AWS.CognitoIdentityServiceProvider({
+      region: process.env.AWS_REGION,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    });
   }
-}, 100);
+  
+  if (!cognitoIdentity) {
+    cognitoIdentity = new AWS.CognitoIdentity({
+      region: process.env.AWS_REGION,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    });
+  }
+  
+  if (!awsServices) {
+    // Import AWS service helper
+    const AWSServices = require('../services/aws');
+    awsServices = new AWSServices(
+      new AWS.DynamoDB.DocumentClient({
+        region: process.env.AWS_REGION,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }),
+      new AWS.S3({
+        region: process.env.AWS_REGION,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }),
+      cognito,
+      cognitoIdentity
+    );
+  }
+}
 
 /**
  * Helper function to send detailed 400 response for missing fields
@@ -48,6 +76,9 @@ function sendMissingFieldsError(res, fields) {
  */
 router.post('/signup', async (req, res) => {
   try {
+    // Initialize AWS services
+    initializeAWSServices();
+    
     // CRITICAL: Log the raw request body for diagnostic purposes
     console.log('📥 Raw signup request body:', JSON.stringify(req.body, null, 2));
     
@@ -234,7 +265,6 @@ router.post('/signup', async (req, res) => {
     // Get DynamoDB client directly from server with proper error handling
     let dynamoDB;
     try {
-      dynamoDB = require('../server').dynamoDB;
       if (!dynamoDB) {
         throw new Error('DynamoDB client not available from server module');
       }
@@ -336,9 +366,9 @@ router.post('/signup', async (req, res) => {
         code: 'SIGNUP_FAILED',
         message: 'Failed to register user. Please try again.',
         details: error.code || error.message || 'Unknown error occurred'
-    });
+      });
+    }
   }
-});
 
 /**
  * POST /api/auth/login
@@ -746,3 +776,4 @@ router.post('/confirm', async (req, res) => {
 });
 
 module.exports = router;
+});

@@ -3,10 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 // Get AWS services from server
-let awsServices;
-setTimeout(() => {
-  awsServices = require('../server').awsServices;
-}, 100);
+const awsServices = require('../server').awsServices;
 
 /**
  * POST /api/hire
