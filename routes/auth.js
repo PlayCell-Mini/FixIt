@@ -388,38 +388,81 @@ router.post('/login', async (req, res) => {
     
     const { email, password } = req.body;
 
-    // Validation
-    if (!email || !password) {
-      return res.status(400).json({
+    // STEP 1: Debug logs before request
+    console.log('Login attempt:', { email, password });
+    console.log('🔐 ========== COGNITO LOGIN ATTEMPT ==========');
+    console.log('📧 Email:', email);
+    console.log('🔑 Password:', password ? '***' + password.slice(-3) : 'NOT PROVIDED');
+    console.log('📏 Email length:', email ? email.length : 0);
+    console.log('📏 Password length:', password ? password.length : 0);
+
+    // STEP 2: Validate environment variables
+    if (!process.env.COGNITO_CLIENT_ID) {
+      console.error('❌ COGNITO_CLIENT_ID not configured in environment variables');
+      return res.status(500).json({
         success: false,
-        error: 'Missing credentials',
-        message: 'Email and password are required'
+        message: 'Server configuration error - COGNITO_CLIENT_ID not set'
       });
     }
 
-    console.log('🔐 Logging in user:', email);
+    if (!process.env.AWS_REGION) {
+      console.error('❌ AWS_REGION not configured in environment variables');
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error - AWS_REGION not set'
+      });
+    }
 
-    // Step 1: Authenticate with Cognito User Pool
+    console.log('✅ Environment variables verified:');
+    console.log('   - COGNITO_CLIENT_ID:', process.env.COGNITO_CLIENT_ID);
+    console.log('   - AWS_REGION:', process.env.AWS_REGION);
+
+    // STEP 3: Validate required fields
+    if (!email || !password) {
+      console.log('❌ Validation failed: Missing email or password');
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password required'
+      });
+    }
+
+    // CRITICAL FIX: Normalize email to lowercase (Cognito is case-sensitive)
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log('📧 Normalized email (USERNAME):', normalizedEmail);
+
+    // STEP 4: Prepare Cognito auth parameters
     const authParams = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: process.env.COGNITO_CLIENT_ID,
       AuthParameters: {
-        USERNAME: email,
+        USERNAME: normalizedEmail,
         PASSWORD: password
       }
     };
 
+    console.log('🔧 Cognito Auth Parameters:');
+    console.log('   - AuthFlow:', authParams.AuthFlow);
+    console.log('   - ClientId:', authParams.ClientId);
+    console.log('   - USERNAME:', authParams.AuthParameters.USERNAME);
+    console.log('   - PASSWORD:', authParams.AuthParameters.PASSWORD ? '***' + authParams.AuthParameters.PASSWORD.slice(-3) : 'NOT SET');
+
+    // STEP 5: Call Cognito initiateAuth
+    console.log('🔍 Calling cognito.initiateAuth()...');
     const authResult = await cognito.initiateAuth(authParams).promise();
 
-    if (!authResult.AuthenticationResult) {
-      throw new Error('Authentication failed - no tokens returned');
-    }
+    console.log('✅ Cognito authentication successful');
+    console.log('🎫 AuthenticationResult keys:', Object.keys(authResult.AuthenticationResult));
 
+    // STEP 6: Extract tokens
     const { IdToken, AccessToken, RefreshToken } = authResult.AuthenticationResult;
 
-    console.log('✅ User authenticated with Cognito User Pool');
+    console.log('✅ Tokens extracted:');
+    console.log('   - AccessToken:', AccessToken ? AccessToken.substring(0, 50) + '...' : 'MISSING');
+    console.log('   - IdToken:', IdToken ? IdToken.substring(0, 50) + '...' : 'MISSING');
+    console.log('   - RefreshToken:', RefreshToken ? RefreshToken.substring(0, 50) + '...' : 'MISSING');
 
-    // Step 2: Get user attributes to extract userId and role
+    // STEP 7: Get user attributes from Cognito
+    console.log('📋 Fetching user attributes from Cognito...');
     const userParams = {
       AccessToken: AccessToken
     };
@@ -437,107 +480,130 @@ router.post('/login', async (req, res) => {
       userId: userId,
       email: attributes.email || email,
       name: attributes.name || '',
-      role: attributes['custom:role'] || 'owner', // Changed default role to 'owner'
+      role: attributes['custom:role'] || 'owner',
       serviceType: attributes['custom:servicetype'] || null
     };
 
-    console.log('📋 User data:', userData);
+    console.log('📋 User data retrieved:', userData);
 
-    // Step 3: Exchange ID Token for temporary AWS credentials using Identity Pool
-    console.log('🎫 Getting temporary AWS credentials from Identity Pool...');
+    // STEP 8: Get temporary AWS credentials via Identity Pool (OPTIONAL)
+    let awsCredentials = null;
+    let identityId = null;
 
-    const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID;
-    const region = process.env.AWS_REGION;
-    const userPoolId = process.env.COGNITO_USER_POOL_ID;
+    try {
+      console.log('🎫 Attempting to get temporary AWS credentials from Identity Pool...');
 
-    // Get Identity ID
-    const getIdParams = {
-      IdentityPoolId: identityPoolId,
-      Logins: {
-        [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: IdToken
+      const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID;
+      const region = process.env.AWS_REGION;
+      const userPoolId = process.env.COGNITO_USER_POOL_ID;
+
+      // Get Identity ID
+      const getIdParams = {
+        IdentityPoolId: identityPoolId,
+        Logins: {
+          [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: IdToken
+        }
+      };
+
+      const identityResult = await cognitoIdentity.getId(getIdParams).promise();
+      identityId = identityResult.IdentityId;
+
+      // Get temporary credentials
+      const credentialsParams = {
+        IdentityId: identityId,
+        Logins: {
+          [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: IdToken
+        }
+      };
+
+      const credentialsResult = await cognitoIdentity.getCredentialsForIdentity(credentialsParams).promise();
+
+      if (!credentialsResult.Credentials) {
+        console.warn('⚠️ Identity Pool returned no credentials');
+      } else {
+        awsCredentials = {
+          accessKeyId: credentialsResult.Credentials.AccessKeyId,
+          secretAccessKey: credentialsResult.Credentials.SecretKey,
+          sessionToken: credentialsResult.Credentials.SessionToken,
+          expiration: credentialsResult.Credentials.Expiration
+        };
+
+        console.log('✅ Temporary AWS credentials obtained');
+        console.log('⏰ Credentials expire at:', awsCredentials.expiration);
       }
-    };
-
-    const identityResult = await cognitoIdentity.getId(getIdParams).promise();
-    const identityId = identityResult.IdentityId;
-
-    // Get temporary credentials
-    const credentialsParams = {
-      IdentityId: identityId,
-      Logins: {
-        [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: IdToken
-      }
-    };
-
-    const credentialsResult = await cognitoIdentity.getCredentialsForIdentity(credentialsParams).promise();
-
-    if (!credentialsResult.Credentials) {
-      throw new Error('Failed to get temporary credentials from Identity Pool');
+    } catch (identityError) {
+      // Identity Pool errors are NON-CRITICAL - login still succeeds with just tokens
+      console.warn('⚠️ Identity Pool error (non-critical):', identityError.code, '-', identityError.message);
+      console.warn('⚠️ Login will proceed without AWS credentials');
+      console.warn('💡 To fix this, configure your Identity Pool to trust User Pool:', process.env.COGNITO_USER_POOL_ID);
     }
 
-    const awsCredentials = {
-      accessKeyId: credentialsResult.Credentials.AccessKeyId,
-      secretAccessKey: credentialsResult.Credentials.SecretKey,
-      sessionToken: credentialsResult.Credentials.SessionToken,
-      expiration: credentialsResult.Credentials.Expiration
-    };
-
-    console.log('✅ Temporary AWS credentials obtained');
-    console.log('⏰ Credentials expire at:', awsCredentials.expiration);
-
-    // Return complete authentication response
+    // STEP 9: Return success response with AuthenticationResult
+    console.log('✅ ========== LOGIN SUCCESSFUL ==========');
     res.status(200).json({
       success: true,
       message: 'Login successful',
+      AuthenticationResult: {
+        IdToken: IdToken,
+        AccessToken: AccessToken,
+        RefreshToken: RefreshToken
+      },
       tokens: {
         idToken: IdToken,
         accessToken: AccessToken,
         refreshToken: RefreshToken
       },
       user: userData,
-      awsCredentials: awsCredentials,
-      identityId: identityId
+      awsCredentials: awsCredentials, // May be null if Identity Pool not configured
+      identityId: identityId // May be null if Identity Pool not configured
     });
 
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error('COGNITO LOGIN ERROR:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
     
-    let errorMessage = 'Failed to login';
-    let errorCode = 'LOGIN_ERROR';
-    let statusCode = 500;
-
-    // User Not Confirmed Check - Explicit handling
-    if (error.code === 'UserNotConfirmedException') {
-      console.log('⚠️ User not confirmed - returning USER_NOT_CONFIRMED error');
-      return res.status(403).json({
+    // Extract email from request for error logging
+    const requestEmail = req.body?.email || 'unknown';
+    
+    // Handle specific Cognito errors
+    if (error.code === 'UserNotFoundException') {
+      console.log('⚠️ User not found:', requestEmail);
+      return res.status(401).json({
         success: false,
-        code: 'USER_NOT_CONFIRMED',
-        error: 'UserNotConfirmedException',
-        message: 'Verification is required. Check your email for the code.'
+        message: 'User not found'
       });
     }
     
-    // Other authentication errors
     if (error.code === 'NotAuthorizedException') {
-      errorMessage = 'Incorrect email or password';
-      errorCode = 'INVALID_CREDENTIALS';
-      statusCode = 401;
-    } else if (error.code === 'UserNotFoundException') {
-      errorMessage = 'User not found';
-      errorCode = 'USER_NOT_FOUND';
-      statusCode = 404;
-    } else if (error.code === 'InvalidParameterException') {
-      errorMessage = error.message;
-      errorCode = 'INVALID_PARAMETER';
-      statusCode = 400;
+      console.log('⚠️ Incorrect email or password for:', requestEmail);
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect email or password'
+      });
+    }
+    
+    if (error.code === 'UserNotConfirmedException') {
+      console.log('⚠️ User not verified:', requestEmail);
+      return res.status(403).json({
+        success: false,
+        message: 'User not verified'
+      });
+    }
+    
+    if (error.code === 'InvalidParameterException') {
+      console.log('⚠️ Invalid parameter:', error.message);
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
     }
 
-    res.status(statusCode).json({
+    // Generic server error
+    return res.status(500).json({
       success: false,
-      code: errorCode,
-      error: error.code || 'LoginError',
-      message: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: error.message || 'Failed to login'
     });
   }
 });
@@ -795,6 +861,10 @@ router.post('/confirm', async (req, res) => {
     
     const { email, verificationCode } = req.body;
 
+    console.log('✉️ ========== EMAIL CONFIRMATION ==========');
+    console.log('📧 Email:', email);
+    console.log('🔢 Verification Code:', verificationCode);
+
     if (!email || !verificationCode) {
       return res.status(400).json({
         success: false,
@@ -804,18 +874,25 @@ router.post('/confirm', async (req, res) => {
       });
     }
 
-    console.log('✉️ Confirming signup for email:', email);
+    // Normalize email to lowercase (must match signup)
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log('📧 Normalized email:', normalizedEmail);
 
+    console.log('🔍 Calling Cognito confirmSignUp...');
+    
     // Call Cognito confirmSignUp
     const params = {
       ClientId: process.env.COGNITO_CLIENT_ID,
-      Username: email,
+      Username: normalizedEmail,
       ConfirmationCode: verificationCode
     };
 
+    console.log('🔧 Confirm params:', { ClientId: params.ClientId, Username: params.Username });
+
     await cognito.confirmSignUp(params).promise();
 
-    console.log('✅ Email confirmed successfully for:', email);
+    console.log('✅ Email confirmed successfully for:', normalizedEmail);
+    console.log('🎉 User status is now: CONFIRMED');
 
     // Success response
     res.status(200).json({

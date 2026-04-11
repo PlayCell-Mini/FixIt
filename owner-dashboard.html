@@ -249,9 +249,20 @@
         const idToken = localStorage.getItem('idToken');
         const userDataStr = localStorage.getItem('userData');
         
+        console.log('📦 localStorage check:', {
+          accessToken: accessToken ? 'PRESENT (' + accessToken.length + ' chars)' : 'MISSING',
+          idToken: idToken ? 'PRESENT (' + idToken.length + ' chars)' : 'MISSING',
+          userData: userDataStr ? 'PRESENT (' + userDataStr.length + ' chars)' : 'MISSING'
+        });
+        
         // STEP 2: Validate tokens exist
         if (!accessToken || !idToken || !userDataStr) {
           console.error('❌ No valid session found - redirecting to login');
+          console.error('   Missing:', {
+            accessToken: !accessToken,
+            idToken: !idToken,
+            userData: !userDataStr
+          });
           window.location.replace('login.html');
           return false;
         }
@@ -260,8 +271,10 @@
         let userData;
         try {
           userData = JSON.parse(userDataStr);
+          console.log('📋 userData parsed:', userData);
         } catch (error) {
           console.error('❌ Invalid userData in localStorage:', error);
+          console.error('   Raw userData:', userDataStr);
           localStorage.clear();
           window.location.replace('login.html');
           return false;
@@ -269,6 +282,8 @@
         
         // STEP 4: Validate user role (owner or seeker allowed)
         const role = userData.role;
+        console.log('👤 User role:', role);
+        
         if (role !== 'owner' && role !== 'seeker') {
           console.error('❌ Access denied! Invalid role:', role);
           alert('Access denied! This dashboard is for service owners only.');
@@ -286,6 +301,12 @@
             const expiry = payload.exp * 1000; // Convert to milliseconds
             const now = Date.now();
             
+            console.log('⏰ Token expiry check:', {
+              expiresAt: new Date(expiry).toLocaleString(),
+              now: new Date(now).toLocaleString(),
+              isExpired: expiry < now
+            });
+            
             if (expiry < now) {
               console.error('❌ Token expired - redirecting to login');
               localStorage.clear();
@@ -293,10 +314,12 @@
               return false;
             }
             
-            console.log('✅ Token valid until:', new Date(expiry).toLocaleString());
+            console.log('✅ Token is still valid');
+          } else {
+            console.warn('⚠️ Invalid token format (expected 3 parts)');
           }
         } catch (error) {
-          console.warn('⚠️ Could not validate token expiry:', error);
+          console.warn('⚠️ Could not validate token expiry:', error.message);
           // Continue anyway - token might still be valid
         }
         

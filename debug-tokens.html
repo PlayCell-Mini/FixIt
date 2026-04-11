@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Login Tokens</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .output {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 4px solid #667eea;
+      white-space: pre-wrap;
+    }
+    .error {
+      border-left-color: #e74c3c;
+      color: #e74c3c;
+    }
+    .success {
+      border-left-color: #2ecc71;
+      color: #2ecc71;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Login Debug Tool</h1>
+  <p>This page shows what's in localStorage after login</p>
+  
+  <button onclick="checkTokens()">Check Tokens</button>
+  <button onclick="clearAndGoLogin()">Clear & Go Login</button>
+  <button onclick="goOwnerDashboard()">Go Owner Dashboard</button>
+  <button onclick="goProviderDashboard()">Go Provider Dashboard</button>
+  
+  <h2>Current localStorage Contents:</h2>
+  <div id="output" class="output">Click "Check Tokens" to see what's stored...</div>
+
+  <script>
+    function checkTokens() {
+      const output = document.getElementById('output');
+      const items = {};
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        items[key] = localStorage.getItem(key);
+      }
+      
+      let html = '📦 LOCAL STORAGE CONTENTS:\n';
+      html += '═'.repeat(60) + '\n\n';
+      
+      if (Object.keys(items).length === 0) {
+        html += '⚠️  localStorage is EMPTY!\n';
+        html += 'This means login didn\'t save any tokens.\n';
+      } else {
+        for (const [key, value] of Object.entries(items)) {
+          const preview = value.length > 100 ? value.substring(0, 100) + '...' : value;
+          html += `${key}:\n${preview}\n\n`;
+        }
+      }
+      
+      // Check required tokens
+      html += '\nVALIDATION:\n';
+      html += '─'.repeat(60) + '\n';
+      
+      const accessToken = localStorage.getItem('accessToken');
+      const idToken = localStorage.getItem('idToken');
+      const userDataStr = localStorage.getItem('userData');
+      
+      html += `✓ accessToken: ${accessToken ? 'PRESENT' : '❌ MISSING'}\n`;
+      html += `✓ idToken: ${idToken ? 'PRESENT' : '❌ MISSING'}\n`;
+      html += `✓ userData: ${userDataStr ? 'PRESENT' : '❌ MISSING'}\n\n`;
+      
+      if (userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr);
+          html += 'USER DATA:\n';
+          html += `  Email: ${userData.email}\n`;
+          html += `  Role: ${userData.role}\n`;
+          html += `  Name: ${userData.name}\n`;
+          html += `  UserId: ${userData.userId}\n\n`;
+          
+          if (userData.role === 'owner' || userData.role === 'seeker') {
+            html += '✅ This role CAN access owner-dashboard.html\n';
+          } else if (userData.role === 'provider') {
+            html += '⚠️  This role CANNOT access owner-dashboard.html\n';
+            html += '   Should go to: provider-dashboard.html\n';
+          } else {
+            html += '⚠️  Unknown role. Will be redirected to login.\n';
+          }
+        } catch (e) {
+          html += `❌ Invalid userData JSON: ${e.message}\n`;
+        }
+      }
+      
+      output.textContent = html;
+      output.className = 'output success';
+    }
+    
+    function clearAndGoLogin() {
+      localStorage.clear();
+      console.log('✅ localStorage cleared');
+      window.location.href = 'login.html';
+    }
+    
+    function goOwnerDashboard() {
+      window.location.href = 'owner-dashboard.html';
+    }
+    
+    function goProviderDashboard() {
+      window.location.href = 'provider-dashboard.html';
+    }
+    
+    // Auto-check on load
+    checkTokens();
+  </script>
+</body>
+</html>

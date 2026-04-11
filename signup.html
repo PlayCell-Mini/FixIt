@@ -602,16 +602,39 @@
           // Try auto-login if we stored password in sessionStorage
           const tempPassword = sessionStorage.getItem('temp_signup_password');
           
+          console.log('🔍 ========== AUTO-LOGIN DEBUG ==========');
+          console.log('📧 Email:', email);
+          console.log('🔑 tempPassword exists:', !!tempPassword);
+          console.log('🔑 tempPassword length:', tempPassword ? tempPassword.length : 0);
+          console.log('🔑 tempPassword value:', tempPassword ? '***' + tempPassword.slice(-3) : 'NULL');
+          console.log('📦 All sessionStorage keys:', Object.keys(sessionStorage));
+          
           if (tempPassword) {
             try {
+              console.log('🚀 Attempting auto-login...');
+              
+              const loginPayload = {
+                email: email,
+                password: tempPassword
+              };
+              
+              console.log('📤 Login payload:', {
+                email: loginPayload.email,
+                passwordLength: loginPayload.password.length
+              });
+              
               // Attempt automatic login
               const loginResp = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ email, password: tempPassword })
+                body: JSON.stringify(loginPayload)
               });
               
+              console.log('📥 Login response status:', loginResp.status);
+              console.log('📥 Login response ok:', loginResp.ok);
+              
               const loginData = await loginResp.json();
+              console.log('📥 Login response data:', loginData);
 
               if (loginResp.ok && loginData.success) {
                 verifMessage.textContent = '✅ Success! Redirecting to dashboard...';
@@ -643,9 +666,15 @@
                 }, 800);
                 
                 return;
+              } else {
+                console.error('❌ Auto-login failed with response:', loginData);
+                console.error('❌ Login error code:', loginData.code);
+                console.error('❌ Login error message:', loginData.message);
+                throw new Error(loginData.message || 'Login failed after verification');
               }
             } catch (loginError) {
-              console.warn('Auto-login failed, redirecting to login page:', loginError);
+              console.error('❌ Auto-login exception:', loginError);
+              console.warn('⚠️ Redirecting to login page due to auto-login failure');
             }
           }
           
