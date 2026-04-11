@@ -283,12 +283,18 @@ router.post('/signup', async (req, res) => {
       throw new Error(`Failed to save user data to DynamoDB: ${dynamoError.message}`);
     }
 
+    // Determine if user needs confirmation
+    const needsConfirmation = signUpResult.UserConfirmed === false;
+
     // CRITICAL: Ensure server returns 201 Created status upon successful registration
     res.status(201).json({
       success: true,
-      message: 'User registered successfully. Please check your email for verification.',
+      message: needsConfirmation 
+        ? 'User created successfully. Please check your email for the verification code.'
+        : 'User registered successfully.',
+      requiresConfirmation: needsConfirmation,
       data: {
-        userId: userId,  // Use the correctly extracted userId
+        userId: userId,
         email: email,
         userConfirmed: signUpResult.UserConfirmed
       }
@@ -347,6 +353,7 @@ router.post('/signup', async (req, res) => {
       });
     }
   }
+});
 
 /**
  * POST /api/auth/login
@@ -677,6 +684,84 @@ router.post('/verify', async (req, res) => {
 });
 
 /**
+ * POST /api/auth/resend-confirmation
+ * Resend verification code to user's email
+ * 
+ * Request Body:
+ * {
+ *   email: string
+ * }
+ * 
+ * Response:
+ * {
+ *   success: true,
+ *   message: 'Verification code resent successfully'
+ * }
+ */
+router.post('/resend-confirmation', async (req, res) => {
+  try {
+    // Initialize AWS services
+    initializeAWSServices();
+    
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing email',
+        message: 'Email is required'
+      });
+    }
+
+    console.log('📤 Resending verification code to:', email);
+
+    const params = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email
+    };
+
+    await cognito.resendConfirmationCode(params).promise();
+
+    console.log('✅ Verification code resent successfully to:', email);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code resent successfully. Please check your email.'
+    });
+
+  } catch (error) {
+    console.error('❌ Resend confirmation error:', error);
+
+    let errorMessage = 'Failed to resend verification code';
+    let errorCode = 'RESEND_ERROR';
+    let statusCode = 500;
+
+    // Handle specific Cognito errors
+    if (error.code === 'UserNotFoundException') {
+      errorMessage = 'No user found with this email address.';
+      statusCode = 404;
+    } else if (error.code === 'InvalidParameterException') {
+      errorMessage = 'Invalid email address format.';
+      statusCode = 400;
+    } else if (error.code === 'TooManyRequestsException') {
+      errorMessage = 'Too many requests. Please wait a few minutes before trying again.';
+      statusCode = 429;
+    } else if (error.code === 'NotAuthorizedException') {
+      errorMessage = 'User is already confirmed. You can log in.';
+      statusCode = 400;
+    }
+
+    res.status(statusCode).json({
+      success: false,
+      code: errorCode,
+      error: error.code || 'ResendError',
+      message: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
  * POST /api/auth/confirm
  * Confirm user signup with verification code
  * * This endpoint is called by the frontend when a user needs to verify their email.
@@ -766,4 +851,3 @@ router.post('/confirm', async (req, res) => {
 });
 
 module.exports = router;
-});

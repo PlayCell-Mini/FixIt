@@ -182,8 +182,8 @@
         </div>
         
         <div class="button-container">
-          <button type="submit" class="login-button">
-            <span class="button-text">Create Account</span>
+          <button type="submit" class="login-button" id="signupSubmitBtn">
+            <span class="button-text">Send Verification Code</span>
           </button>
         </div>
       </form>
@@ -206,7 +206,7 @@
       <h3 id="verifTitle">Email Verification Required</h3>
       <p id="verifSubtitle">We sent a 6-digit code to your email <strong id="verifEmailText"></strong></p>
 
-      <input type="text" id="verifCodeInput" class="verif-code-input" placeholder="Enter 6-digit code" maxlength="6" autocomplete="off" inputmode="numeric" />
+      <input type="text" id="verifCodeInput" class="verif-code-input" placeholder="Enter 6-digit code" maxlength="6" autocomplete="off" inputmode="numeric" pattern="[0-9]*" />
 
       <div class="small-muted" id="verifMessage">Check your inbox (and spam). The code expires in a few minutes.</div>
 
@@ -249,6 +249,15 @@
     const verifResendBtn = document.getElementById('verifResendBtn');
     const verifCancelBtn = document.getElementById('verifCancelBtn');
     const verifMessage = document.getElementById('verifMessage');
+    const signupSubmitBtn = document.getElementById('signupSubmitBtn');
+
+    // State management for signup flow
+    let signupState = {
+      step: 'signup', // 'signup' | 'verification'
+      email: null,
+      password: null,
+      isLoading: false
+    };
 
     // Function to control visibility of service type section based on role selection
     function toggleServiceTypeSection() {
@@ -303,13 +312,16 @@
     }
 
     // Add loading state to button
-    function setLoadingState(isLoading) {
+    function setLoadingState(isLoading, buttonText = 'Send Verification Code') {
+      signupState.isLoading = isLoading;
       if (isLoading) {
         signupButton.classList.add('loading');
         signupButton.disabled = true;
+        signupButton.querySelector('.button-text').textContent = 'Sending Code...';
       } else {
         signupButton.classList.remove('loading');
         signupButton.disabled = false;
+        signupButton.querySelector('.button-text').textContent = buttonText;
       }
     }
 
@@ -423,45 +435,96 @@
 
     // Verification modal controls
     function openVerificationModal(email) {
+      signupState.step = 'verification';
+      signupState.email = email;
+      
       verifEmailText.textContent = email;
       verifCodeInput.value = '';
-      verifMessage.textContent = 'Check your inbox (and spam). The code expires in a few minutes.';
+      verifMessage.textContent = 'Check your inbox (and spam folder). The code expires in a few minutes.';
       verifOverlay.classList.add('show');
       verifOverlay.setAttribute('aria-hidden', 'false');
+      
+      // Reset resend button state
+      verifResendBtn.disabled = false;
+      verifResendBtn.textContent = 'Resend Code';
+      
       setTimeout(() => verifCodeInput.focus(), 80);
     }
 
     function closeVerificationModal() {
       verifOverlay.classList.remove('show');
       verifOverlay.setAttribute('aria-hidden', 'true');
+      signupState.step = 'signup';
+      signupState.email = null;
     }
 
-    // Resend code
+    // Resend code with improved UX
     async function resendVerificationCode(email) {
+      if (!email) {
+        verifMessage.textContent = '❌ Email address not found';
+        return;
+      }
+
       try {
         verifResendBtn.disabled = true;
-        verifResendBtn.textContent = 'Resending...';
+        verifResendBtn.textContent = 'Sending...';
+        verifMessage.textContent = '⏳ Sending verification code...';
+        
         const res = await fetch('/api/auth/resend-confirmation', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ email })
         });
+        
         const d = await res.json();
-        if (res.ok) {
-          verifMessage.textContent = '✅ Code resent. Check your inbox.';
+        
+        if (res.ok && d.success) {
+          verifMessage.textContent = '✅ Code resent successfully! Check your inbox.';
+          
+          // Add cooldown to prevent spam (60 seconds)
+          let cooldown = 60;
+          verifResendBtn.disabled = true;
+          const cooldownInterval = setInterval(() => {
+            cooldown--;
+            verifResendBtn.textContent = `Resend Code (${cooldown}s)`;
+            if (cooldown <= 0) {
+              clearInterval(cooldownInterval);
+              verifResendBtn.disabled = false;
+              verifResendBtn.textContent = 'Resend Code';
+            }
+          }, 1000);
         } else {
           verifMessage.textContent = '❌ ' + (d.message || 'Failed to resend. Try again later.');
+          verifResendBtn.disabled = false;
+          verifResendBtn.textContent = 'Resend Code';
         }
       } catch (err) {
-        verifMessage.textContent = '❌ Network error. Try again.';
+        verifMessage.textContent = '❌ Network error. Please try again.';
         console.error('Resend error', err);
-      } finally {
         verifResendBtn.disabled = false;
         verifResendBtn.textContent = 'Resend Code';
       }
     }
 
     // Setup verification listeners
+    // Real-time validation: only allow numbers in verification code
+    verifCodeInput.addEventListener('input', (e) => {
+      // Remove non-numeric characters
+      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+      
+      // Update border color based on input length
+      if (e.target.value.length === 6) {
+        e.target.style.borderColor = '#48bb78';
+        e.target.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.2)';
+      } else if (e.target.value.length > 0) {
+        e.target.style.borderColor = '#667eea';
+        e.target.style.boxShadow = 'none';
+      } else {
+        e.target.style.borderColor = '#ddd';
+        e.target.style.boxShadow = 'none';
+      }
+    });
+
     verifConfirmBtn.addEventListener('click', async () => {
       const email = verifEmailText.textContent;
       await handleVerificationFromSignup(email);
@@ -486,13 +549,23 @@
     // Handle confirmation and auto-login (used by modal after signup)
     async function handleVerificationFromSignup(email) {
       const verificationCode = verifCodeInput.value.trim();
-      if (!verificationCode || verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
-        verifMessage.textContent = '❌ Please enter a valid 6-digit code';
+      
+      // Validate code format
+      if (!verificationCode) {
+        verifMessage.textContent = '❌ Please enter the 6-digit verification code';
+        return;
+      }
+      
+      if (verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
+        verifMessage.textContent = '❌ Code must be exactly 6 digits';
         return;
       }
 
+      // Disable UI during verification
       verifConfirmBtn.disabled = true;
       verifConfirmBtn.textContent = '⏳ Verifying...';
+      verifCodeInput.disabled = true;
+      verifMessage.textContent = '⏳ Verifying your code...';
 
       try {
         const response = await fetch('/api/auth/confirm', {
@@ -500,67 +573,114 @@
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ email, verificationCode })
         });
+        
         const data = await response.json();
 
         if (response.ok && data.success) {
-          verifMessage.textContent = '✅ Verified successfully! Logging in...';
+          verifMessage.textContent = '✅ Email verified successfully! Logging you in...';
+          verifConfirmBtn.textContent = '✅ Verified!';
 
-          // try auto-login if we stored password in sessionStorage
+          // Try auto-login if we stored password in sessionStorage
           const tempPassword = sessionStorage.getItem('temp_signup_password');
+          
           if (tempPassword) {
-            // Attempt login automatically
-            const loginResp = await fetch('/api/auth/login', {
-              method: 'POST',
-              headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({ email, password: tempPassword })
-            });
-            const loginData = await loginResp.json();
+            try {
+              // Attempt automatic login
+              const loginResp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ email, password: tempPassword })
+              });
+              
+              const loginData = await loginResp.json();
 
-            if (loginResp.ok && loginData.success) {
-              // Save tokens & redirect (same as login.html)
-              localStorage.setItem('accessToken', loginData.tokens.accessToken);
-              localStorage.setItem('idToken', loginData.tokens.idToken);
-              localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
-              localStorage.setItem('userData', JSON.stringify(loginData.user));
-              if (loginData.awsCredentials) {
-                localStorage.setItem('awsTempCredentials', JSON.stringify(loginData.awsCredentials));
+              if (loginResp.ok && loginData.success) {
+                verifMessage.textContent = '✅ Success! Redirecting to dashboard...';
+                
+                // Save tokens & credentials
+                localStorage.setItem('accessToken', loginData.tokens.accessToken);
+                localStorage.setItem('idToken', loginData.tokens.idToken);
+                localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
+                localStorage.setItem('userData', JSON.stringify(loginData.user));
+                
+                if (loginData.awsCredentials) {
+                  localStorage.setItem('awsTempCredentials', JSON.stringify(loginData.awsCredentials));
+                  console.log('🔐 AWS credentials saved');
+                }
+                
+                // Clear temporary password
+                sessionStorage.removeItem('temp_signup_password');
+
+                // Role-based redirect
+                const role = loginData.user.role;
+                setTimeout(() => {
+                  if (role === 'owner') {
+                    window.location.replace('owner-dashboard.html');
+                  } else if (role === 'provider') {
+                    window.location.replace('provider-dashboard.html');
+                  } else {
+                    window.location.replace('owner-dashboard.html');
+                  }
+                }, 800);
+                
+                return;
               }
-              sessionStorage.removeItem('temp_signup_password');
-
-              // Role-based redirect
-              const role = loginData.user.role;
-              if (role === 'owner') window.location.replace('owner-dashboard.html');
-              else if (role === 'provider') window.location.replace('provider-dashboard.html');
-              else window.location.replace('owner-dashboard.html');
-            } else {
-              // Verified but auto-login failed
-              closeVerificationModal();
-              showSuccess('Email verified. Please log in with your credentials.');
-              sessionStorage.removeItem('temp_signup_password');
-              setTimeout(() => window.location.replace('login.html'), 1800);
+            } catch (loginError) {
+              console.warn('Auto-login failed, redirecting to login page:', loginError);
             }
-          } else {
-            // No temp password stored — direct the user to login
-            closeVerificationModal();
-            showSuccess('Email verified. Please log in with your credentials.');
-            setTimeout(() => window.location.replace('login.html'), 1800);
           }
+          
+          // If auto-login failed or no password stored
+          closeVerificationModal();
+          showSuccess('✅ Email verified successfully! You can now log in.');
+          sessionStorage.removeItem('temp_signup_password');
+          
+          setTimeout(() => {
+            window.location.replace('login.html');
+          }, 1500);
+          
         } else {
-          verifMessage.textContent = '❌ ' + (data.message || 'Verification failed');
+          // Verification failed
+          let errorMsg = 'Verification failed. Please try again.';
+          
+          // Handle specific Cognito errors
+          if (data.code === 'CodeMismatchException') {
+            errorMsg = '❌ Invalid code. Please check and try again.';
+          } else if (data.code === 'ExpiredCodeException') {
+            errorMsg = '❌ Code expired. Please click "Resend Code" to get a new one.';
+          } else if (data.code === 'NotAuthorizedException') {
+            errorMsg = '✅ User already confirmed. Redirecting to login...';
+            closeVerificationModal();
+            setTimeout(() => window.location.replace('login.html'), 1500);
+            return;
+          } else if (data.message) {
+            errorMsg = '❌ ' + data.message;
+          }
+          
+          verifMessage.textContent = errorMsg;
           verifConfirmBtn.disabled = false;
           verifConfirmBtn.textContent = '✅ Verify Email';
+          verifCodeInput.disabled = false;
+          verifCodeInput.value = '';
+          verifCodeInput.focus();
         }
       } catch (err) {
-        console.error('Verification error', err);
-        verifMessage.textContent = '❌ Network error. Try again.';
+        console.error('Verification error:', err);
+        verifMessage.textContent = '❌ Network error. Please try again.';
         verifConfirmBtn.disabled = false;
         verifConfirmBtn.textContent = '✅ Verify Email';
+        verifCodeInput.disabled = false;
       }
     }
 
-    // Form submission handler
+    // Form submission handler - STEP 1: Send verification code
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Don't allow submission if already loading
+      if (signupState.isLoading) {
+        return;
+      }
       
       const fullName = fullNameInput.value.trim();
       const email = emailInput.value.trim();
@@ -572,18 +692,17 @@
       // CRITICAL: Ensure we always get the latest value from the hidden input
       const serviceType = selectedServiceTypeInput.value || '';
       
-      // Log the values for debugging
-      console.log('📋 Form values:', { fullName, email, password, confirmPassword, role, serviceType, address });
+      console.log('📋 Form values:', { fullName, email, role, serviceType });
 
       // Basic validation
       if (!fullName || !email || !password || !confirmPassword || !address || !role) {
-        showError('Please fill in all fields');
+        showError('Please fill in all required fields');
         return;
       }
 
       // Full name validation
       if (fullName.length < 2) {
-        showError('Please enter a valid full name');
+        showError('Please enter a valid full name (at least 2 characters)');
         return;
       }
 
@@ -615,30 +734,20 @@
 
       // CRITICAL VALIDATION: Service type validation for providers
       if (role === 'provider') {
-        // Additional check to ensure serviceType is not empty
         if (!serviceType || serviceType.trim() === '') {
           showError('Please select a service type');
-          // Add visual indication to draw attention to the service type section
-          serviceTypeSection.style.border = '2px solid #e53e3e';
-          serviceTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
-        
-        // FINAL VALIDATION: Ensure serviceType is not just whitespace
-        if (serviceType.trim().length === 0) {
-          showError('Please select a valid service type');
           serviceTypeSection.style.border = '2px solid #e53e3e';
           serviceTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
           return;
         }
       }
 
+      // Set loading state
       setLoadingState(true);
 
       try {
-        console.log('📝 Registering user via backend API...');
+        console.log('📝 Step 1: Creating user account...');
         
-        // CRITICAL: Payload Match - Ensure the JSON payload is structured correctly
         const signupData = {
           fullName: fullName,
           email: email,
@@ -648,11 +757,8 @@
           serviceType: role === 'provider' ? serviceType.trim() : null
         };
         
-        // FINAL DIAGNOSTIC: Log the exact payload being sent to the backend
-        console.log('FRONTEND PAYLOAD SENT:', JSON.stringify(signupData, null, 2));
-        console.log('📤 Signup data being sent:', signupData);
+        console.log('📤 Sending signup request:', signupData);
 
-        // CRITICAL: Frontend Validation Check - Send data directly to backend API
         const response = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: {
@@ -661,8 +767,7 @@
           body: JSON.stringify(signupData)
         });
 
-        // --- Robust response handling (FIX) ---
-        // Read response text once, try to parse JSON but tolerate non-JSON or empty body.
+        // Parse response safely
         const rawText = await response.text();
         let data = {};
         try {
@@ -672,115 +777,80 @@
           data = { rawText };
         }
 
-        // Consider backend indicating success even if HTTP status is non-2xx:
-        const backendIndicatesSuccess =
-          (data && (data.success === true)) ||
-          (data && (data.code === 'USER_NOT_CONFIRMED')) ||
-          (data && (data.error === 'UserNotConfirmedException')) ||
-          (data && data.user && data.user.confirmationRequired) ||
-          (data && data.requiresConfirmation === true) ||
-          (data && data.message && /verification/i.test(data.message));
+        // Check if backend indicates success
+        const backendIndicatesSuccess = data && data.success === true;
 
         if (response.ok || backendIndicatesSuccess) {
-          console.log('✅ User registration accepted by backend (status or body).', { status: response.status, data });
+          console.log('✅ User account created successfully', { status: response.status, data });
 
-          // Store password temporarily so we can try auto-login after verification
+          // Store password temporarily for auto-login after verification
           sessionStorage.setItem('temp_signup_password', password);
 
-          // detect if needs confirmation (even when status not 200)
-          const needsConfirmation = backendIndicatesSuccess && (
-            data.code === 'USER_NOT_CONFIRMED' ||
-            data.error === 'UserNotConfirmedException' ||
+          // Check if email confirmation is required
+          const needsConfirmation = 
             data.requiresConfirmation === true ||
-            (data.user && data.user.confirmationRequired) ||
-            (data.message && /verification/i.test(data.message))
-          );
+            data.code === 'USER_NOT_CONFIRMED' ||
+            (data.message && /verification|confirm/i.test(data.message));
 
           if (needsConfirmation) {
+            // STEP 2: Show verification modal
             openVerificationModal(email);
-            showSuccess('Account created. Enter the verification code sent to your email.');
-            setLoadingState(false);
+            showSuccess('✅ Account created! Please check your email for the 6-digit verification code.');
+            setLoadingState(false, 'Send Verification Code');
           } else {
-            // If backend truly created user and no confirmation required
-            showSuccess('Account created successfully! Redirecting to login...');
+            // User confirmed automatically (rare case)
+            showSuccess('✅ Account created successfully! Redirecting to login...');
             sessionStorage.removeItem('temp_signup_password');
-            setLoadingState(false);
+            setLoadingState(false, 'Send Verification Code');
+            
             setTimeout(() => {
               window.location.href = 'login.html';
             }, 1500);
           }
 
         } else {
-          // Not ok and backend did NOT indicate success — map known cognito error codes if present
-          console.warn('Backend returned non-ok and did not indicate success:', response.status, data);
+          // Handle error responses
+          console.warn('Signup failed:', response.status, data);
 
-          // Map server/Cognito style errors to friendly messages
-          if (data) {
-            // Username already exists
-            if (data.code === 'UsernameExistsException' || data.error === 'UsernameExistsException' || (data.message && /already exists|exists/i.test(data.message))) {
-              throw new Error('An account with this email already exists.');
-            }
-
-            // Invalid parameter (email format etc)
-            if (data.code === 'InvalidParameterException' || data.error === 'InvalidParameterException' || (data.message && /invalid parameter/i.test(data.message))) {
-              throw new Error('Please enter a valid email address.');
-            }
-
-            if (data.code === 'InvalidPasswordException' || data.error === 'InvalidPasswordException') {
-              throw new Error('Password is too weak. Please choose a stronger password.');
-            }
-
-            if (data.code === 'TooManyRequestsException' || data.error === 'TooManyRequestsException') {
-              throw new Error('Too many requests. Please try again later.');
-            }
-
-            // If server sent a clear message, use it
-            if (data.message) {
-              throw new Error(data.message);
-            }
+          // Map error codes to user-friendly messages
+          if (data.code === 'UsernameExistsException' || (data.message && /already exists/i.test(data.message))) {
+            throw new Error('An account with this email already exists. Please try logging in instead.');
           }
 
-          // Generic fallback with HTTP status
-          throw new Error('Failed to register user. Server returned status ' + response.status);
+          if (data.code === 'InvalidParameterException') {
+            throw new Error('Invalid email format. Please enter a valid email address.');
+          }
+
+          if (data.code === 'InvalidPasswordException') {
+            throw new Error('Password is too weak. Please choose a stronger password (min 8 characters, mix of uppercase, lowercase, numbers, and special characters).');
+          }
+
+          if (data.code === 'TooManyRequestsException') {
+            throw new Error('Too many signup attempts. Please wait a few minutes and try again.');
+          }
+
+          // Use server message if available
+          if (data.message) {
+            throw new Error(data.message);
+          }
+
+          throw new Error('Failed to create account. Please try again.');
         }
 
       } catch (error) {
-        setLoadingState(false);
+        setLoadingState(false, 'Send Verification Code');
         
-        // Handle specific error messages
-        let errorMessage = 'An error occurred. Please try again.';
+        // Extract error message
+        let errorMessage = 'An unexpected error occurred. Please try again.';
         
-        // If it's an Error object with message, prefer that
         if (error && error.message) {
           errorMessage = error.message;
         } else if (error && typeof error === 'string') {
           errorMessage = error;
         }
         
-        // AWS Cognito error codes (in case some code object passed through)
-        if (error && error.code) {
-          switch (error.code) {
-            case 'UsernameExistsException':
-              errorMessage = 'An account with this email already exists.';
-              break;
-            case 'InvalidParameterException':
-              errorMessage = 'Please enter a valid email address.';
-              break;
-            case 'InvalidPasswordException':
-              errorMessage = 'Password is too weak. Please choose a stronger password.';
-              break;
-            case 'TooManyRequestsException':
-              errorMessage = 'Too many requests. Please try again later.';
-              break;
-            case 'NetworkError':
-              errorMessage = 'Network error. Please check your connection.';
-              break;
-            default:
-              errorMessage = error.message || errorMessage;
-          }
-        }
-
         showError(errorMessage);
+        console.error('Signup error:', error);
       }
     });
 
