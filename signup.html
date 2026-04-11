@@ -525,6 +525,25 @@
       }
     });
 
+    // Support paste event for OTP autofill
+    verifCodeInput.addEventListener('paste', (e) => {
+      // Allow the paste to happen
+      setTimeout(() => {
+        // Clean up pasted content (remove non-numeric)
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+        
+        // Trigger input event to update visual feedback
+        e.target.dispatchEvent(new Event('input'));
+        
+        // If 6 digits, auto-submit
+        if (e.target.value.length === 6) {
+          console.log('📋 OTP pasted successfully, auto-verifying...');
+          const email = verifEmailText.textContent;
+          handleVerificationFromSignup(email);
+        }
+      }, 10);
+    });
+
     verifConfirmBtn.addEventListener('click', async () => {
       const email = verifEmailText.textContent;
       await handleVerificationFromSignup(email);
@@ -777,8 +796,20 @@
           data = { rawText };
         }
 
+        console.log('📥 Signup Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          data: data
+        });
+
         // Check if backend indicates success
         const backendIndicatesSuccess = data && data.success === true;
+
+        // CRITICAL FIX: Handle case where user already exists but is not confirmed
+        const userExistsNotConfirmed = 
+          data.code === 'UsernameExistsException' ||
+          (data.message && /already exists/i.test(data.message));
 
         if (response.ok || backendIndicatesSuccess) {
           console.log('✅ User account created successfully', { status: response.status, data });
@@ -792,13 +823,29 @@
             data.code === 'USER_NOT_CONFIRMED' ||
             (data.message && /verification|confirm/i.test(data.message));
 
+          console.log('🔍 needsConfirmation check:', {
+            requiresConfirmation: data.requiresConfirmation,
+            code: data.code,
+            message: data.message,
+            needsConfirmation
+          });
+
           if (needsConfirmation) {
             // STEP 2: Show verification modal
-            openVerificationModal(email);
-            showSuccess('✅ Account created! Please check your email for the 6-digit verification code.');
+            console.log('📧 Opening verification modal for email:', email);
+            
+            // Prevent duplicate modal openings
+            if (signupState.step !== 'verification') {
+              openVerificationModal(email);
+              showSuccess('✅ Account created! Please check your email for the 6-digit verification code.');
+            } else {
+              console.warn('⚠️ Verification modal already open');
+            }
+            
             setLoadingState(false, 'Send Verification Code');
           } else {
             // User confirmed automatically (rare case)
+            console.log('✅ User auto-confirmed by Cognito (no verification needed)');
             showSuccess('✅ Account created successfully! Redirecting to login...');
             sessionStorage.removeItem('temp_signup_password');
             setLoadingState(false, 'Send Verification Code');
@@ -808,13 +855,38 @@
             }, 1500);
           }
 
+        } else if (userExistsNotConfirmed) {
+          // CRITICAL FIX: User already exists but not confirmed
+          console.log('⚠️ User exists but not confirmed, opening verification modal');
+          
+          // Store password for auto-login after verification
+          sessionStorage.setItem('temp_signup_password', password);
+          
+          // Open verification modal anyway
+          if (signupState.step !== 'verification') {
+            openVerificationModal(email);
+            showSuccess('⚠️ This email is already registered but not verified. Please enter the verification code.');
+          }
+          
+          setLoadingState(false, 'Send Verification Code');
+          
         } else {
           // Handle error responses
           console.warn('Signup failed:', response.status, data);
 
           // Map error codes to user-friendly messages
           if (data.code === 'UsernameExistsException' || (data.message && /already exists/i.test(data.message))) {
-            throw new Error('An account with this email already exists. Please try logging in instead.');
+            // CRITICAL: Don't throw error, open verification modal instead
+            console.log('⚠️ User exists, allowing resend verification');
+            sessionStorage.setItem('temp_signup_password', password);
+            
+            if (signupState.step !== 'verification') {
+              openVerificationModal(email);
+              showSuccess('⚠️ Account exists but not verified. Please check your email for the verification code.');
+            }
+            
+            setLoadingState(false, 'Send Verification Code');
+            return; // Don't throw error, user can verify
           }
 
           if (data.code === 'InvalidParameterException') {

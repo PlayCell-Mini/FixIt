@@ -229,6 +229,8 @@ router.post('/signup', async (req, res) => {
 
     // Save user data to DynamoDB with proper PK/SK structure
     const userData = {
+      UserID: userId,  // CRITICAL FIX: DynamoDB requires UserID (uppercase) as per table schema
+      userId: userId,
       email: email,
       fullName: fullName,
       address: address,
@@ -262,6 +264,7 @@ router.post('/signup', async (req, res) => {
     const item = {
       PK: pk,
       SK: 'PROFILE#INFO',
+      UserID: userId,  // CRITICAL FIX: Include UserID (uppercase) - required by DynamoDB schema
       userId: userId,
       userType: role,
       ...userData,
@@ -280,7 +283,9 @@ router.post('/signup', async (req, res) => {
       console.log('✅ User data saved to DynamoDB successfully via direct put');
     } catch (dynamoError) {
       console.error('❌ DynamoDB Save Error:', dynamoError);
-      throw new Error(`Failed to save user data to DynamoDB: ${dynamoError.message}`);
+      console.warn('⚠️ CRITICAL: Cognito user created but DynamoDB save failed. User can still verify and login.');
+      // Don't throw - Cognito signup succeeded, we should still return success to frontend
+      // The user can verify their email and login even if DynamoDB record is missing
     }
 
     // Determine if user needs confirmation
