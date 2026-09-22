@@ -28,12 +28,10 @@ if (!supabaseIsConfigured) {
   console.log('✅ Supabase configuration detected.');
 }
 
-module.exports = {
-  app,
-  supabase,
-  supabaseAdmin,
-  supabaseIsConfigured
-};
+app.supabase = supabase;
+app.supabaseAdmin = supabaseAdmin;
+app.supabaseIsConfigured = supabaseIsConfigured;
+module.exports = app;
 
 // API Routes
 const authRoutes = require('./routes/auth');
