@@ -29,6 +29,7 @@ if (!supabaseIsConfigured) {
 }
 
 module.exports = {
+  app,
   supabase,
   supabaseAdmin,
   supabaseIsConfigured
@@ -102,12 +103,13 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).send('Server Error');
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log('\n' + '='.repeat(50));
-  console.log('🚀 FixIt Service Marketplace Server');
-  console.log('='.repeat(50));
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('='.repeat(50) + '\n');
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log('\n' + '='.repeat(50));
+    console.log('🚀 FixIt Service Marketplace Server');
+    console.log('='.repeat(50));
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('='.repeat(50) + '\n');
+  });
+}

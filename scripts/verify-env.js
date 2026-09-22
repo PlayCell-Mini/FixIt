@@ -10,20 +10,21 @@ const requiredVars = [
 
 console.log('\n🔍 Checking Supabase configuration...\n');
 
-const placeholderValues = new Set([
-  'https://your-project.supabase.co',
-  'your-anon-key',
-  'your-service-role-key',
-  'example',
-  'changeme'
-]);
+const isPlaceholder = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return !normalized
+    || normalized === 'https://your-project.supabase.co'
+    || normalized === 'example'
+    || normalized === 'changeme'
+    || normalized.startsWith('your-');
+};
 
 let allValid = true;
 const results = [];
 
 requiredVars.forEach((varName) => {
   const value = process.env[varName];
-  const isSet = !!value && !placeholderValues.has(String(value).trim().toLowerCase());
+  const isSet = !isPlaceholder(value);
 
   if (isSet) {
     results.push(`✅ ${varName}`);
