@@ -1,38 +1,27 @@
 #!/usr/bin/env node
 
-// Environment Setup Verification Script
 require('dotenv').config();
 
 const requiredVars = [
-  'AWS_REGION',
-  'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY',
-  'S3_BUCKET',
-  'DYNAMODB_USERS_TABLE',
-  'DYNAMODB_PROVIDERS_TABLE',
-  'DYNAMODB_JOBS_TABLE',
-  'COGNITO_USER_POOL_ID',
-  'COGNITO_CLIENT_ID',
-  'COGNITO_IDENTITY_POOL_ID'
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY'
 ];
 
-console.log('\n🔍 Checking environment configuration...\n');
-
-let allValid = true;
-const results = [];
+console.log('\n🔍 Checking Supabase configuration...\n');
 
 const placeholderValues = new Set([
-  'your_access_key_here',
-  'your_secret_key_here',
-  'your_user_pool_id_here',
-  'your_client_id_here',
-  'your_identity_pool_id_here',
-  'your_bucket_name_here',
+  'https://your-project.supabase.co',
+  'your-anon-key',
+  'your-service-role-key',
   'example',
   'changeme'
 ]);
 
-requiredVars.forEach(varName => {
+let allValid = true;
+const results = [];
+
+requiredVars.forEach((varName) => {
   const value = process.env[varName];
   const isSet = !!value && !placeholderValues.has(String(value).trim().toLowerCase());
 
@@ -44,18 +33,16 @@ requiredVars.forEach(varName => {
   }
 });
 
-results.forEach(r => console.log(r));
+results.forEach((r) => console.log(r));
 
 console.log('\n' + '='.repeat(50));
 
 if (allValid) {
-  console.log('✅ All environment variables are configured!');
+  console.log('✅ Supabase environment is configured.');
   console.log('You can now run: npm start');
 } else {
-  console.log('❌ Please configure missing variables in .env file');
-  console.log('See .env for required values');
+  console.log('❌ Configure the Supabase vars in .env before starting the app.');
 }
 
 console.log('='.repeat(50) + '\n');
-
 process.exit(allValid ? 0 : 1);
