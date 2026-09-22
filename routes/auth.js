@@ -2,6 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../supabaseClient');
 
+const placeholderValues = new Set([
+  'https://your-project.supabase.co',
+  'your-anon-key',
+  'your-publishable-key',
+  'your-service-role-key',
+  'your-secret-key',
+  'example',
+  'changeme'
+]);
+
+function supabaseIsConfigured() {
+  return ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']
+    .every((name) => {
+      const value = String(process.env[name] || '').trim().toLowerCase();
+      return value && !placeholderValues.has(value);
+    });
+}
+
 function validateSignupBody(body) {
   const email = String(body?.email || '').trim().toLowerCase();
   const password = String(body?.password || '');
@@ -27,6 +45,14 @@ function validateSignupBody(body) {
 
 router.post('/signup', async (req, res) => {
   try {
+    if (!supabaseIsConfigured()) {
+      return res.status(503).json({
+        success: false,
+        code: 'SUPABASE_NOT_CONFIGURED',
+        message: 'Supabase is not configured. Add the real project URL and keys in Vercel environment variables.'
+      });
+    }
+
     const validated = validateSignupBody(req.body);
     if (validated.error) {
       return res.status(400).json({ success: false, code: 'MISSING_FIELDS', message: validated.error });
@@ -225,6 +251,14 @@ router.post('/verify', async (req, res) => {
 
 router.post('/resend-confirmation', async (req, res) => {
   try {
+    if (!supabaseIsConfigured()) {
+      return res.status(503).json({
+        success: false,
+        code: 'SUPABASE_NOT_CONFIGURED',
+        message: 'Supabase is not configured. Add the real project URL and keys in Vercel environment variables.'
+      });
+    }
+
     const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email) {
       return res.status(400).json({

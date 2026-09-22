@@ -835,10 +835,8 @@
         // Check if backend indicates success
         const backendIndicatesSuccess = data && data.success === true;
 
-        // CRITICAL FIX: Handle case where user already exists but is not confirmed
-        const userExistsNotConfirmed = 
-          data.code === 'UsernameExistsException' ||
-          (data.message && /already exists/i.test(data.message));
+          // Supabase returns an explicit error when the account already exists.
+          const userExistsNotConfirmed = data.code === 'USER_NOT_CONFIRMED';
 
         if (response.ok || backendIndicatesSuccess) {
           console.log('✅ User account created successfully', { status: response.status, data });
@@ -904,7 +902,7 @@
           console.warn('Signup failed:', response.status, data);
 
           // Map error codes to user-friendly messages
-          if (data.code === 'UsernameExistsException' || (data.message && /already exists/i.test(data.message))) {
+          if (data.code === 'USER_NOT_CONFIRMED') {
             // CRITICAL: Don't throw error, open verification modal instead
             console.log('⚠️ User exists, allowing resend verification');
             sessionStorage.setItem('temp_signup_password', password);
@@ -918,16 +916,8 @@
             return; // Don't throw error, user can verify
           }
 
-          if (data.code === 'InvalidParameterException') {
-            throw new Error('Invalid email format. Please enter a valid email address.');
-          }
-
-          if (data.code === 'InvalidPasswordException') {
-            throw new Error('Password is too weak. Please choose a stronger password (min 8 characters, mix of uppercase, lowercase, numbers, and special characters).');
-          }
-
-          if (data.code === 'TooManyRequestsException') {
-            throw new Error('Too many signup attempts. Please wait a few minutes and try again.');
+          if (data.code === 'SUPABASE_NOT_CONFIGURED') {
+            throw new Error(data.message);
           }
 
           // Use server message if available
