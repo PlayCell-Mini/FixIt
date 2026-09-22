@@ -1,14 +1,14 @@
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
-const { supabaseAdmin } = require('../supabaseClient');
+const { supabase, supabaseAdmin } = require('../supabaseClient');
 
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype)) {
       return cb(new Error('Only image files are allowed'), false);
     }
     cb(null, true);
@@ -25,14 +25,19 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    const { userId, fileType = 'profile' } = req.body;
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing userId',
-        message: 'userId is required'
-      });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Unauthorized', message: 'Access token required' });
     }
+
+    const accessToken = authHeader.replace('Bearer ', '').trim();
+    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized', message: 'Invalid access token' });
+    }
+
+    const userId = userData.user.id;
+    const { fileType = 'profile' } = req.body;
 
     const validTypes = ['profile', 'job'];
     if (!validTypes.includes(fileType)) {
@@ -45,7 +50,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'profile-pictures';
     const timestamp = Date.now();
-    const ext = req.file.originalname.split('.').pop() || 'jpg';
+    const ext = ({
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif'
+    })[req.file.mimetype];
     const key = fileType === 'profile'
       ? `${userId}/profile-${timestamp}.${ext}`
       : `${userId}/job-${timestamp}.${ext}`;

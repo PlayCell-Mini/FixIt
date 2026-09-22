@@ -1,22 +1,54 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseAdmin } = require('../supabaseClient');
+const { supabase, supabaseAdmin } = require('../supabaseClient');
+
+async function getAuthenticatedUser(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw Object.assign(new Error('Access token required'), { status: 401 });
+  }
+
+  const accessToken = authHeader.replace('Bearer ', '').trim();
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  if (error || !data?.user) {
+    throw Object.assign(new Error('Invalid access token'), { status: 401 });
+  }
+
+  return data.user;
+}
 
 router.post('/hire', async (req, res) => {
   try {
-    const { workerId, customerId, serviceType, description } = req.body;
+    const user = await getAuthenticatedUser(req);
+    const { workerId, providerId, serviceType, description } = req.body;
+    const requestedProviderId = providerId || workerId;
 
-    if (!workerId || !customerId || !serviceType || !description) {
+    if (!requestedProviderId || !serviceType || !description) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        message: 'workerId, customerId, serviceType, and description are required'
+        message: 'providerId, serviceType, and description are required'
+      });
+    }
+
+    const { data: provider, error: providerError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', requestedProviderId)
+      .eq('role', 'provider')
+      .single();
+
+    if (providerError || !provider) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid provider',
+        message: 'The selected provider does not exist.'
       });
     }
 
     const payload = {
-      worker_id: workerId,
-      customer_id: customerId,
+      provider_id: requestedProviderId,
+      requester_id: user.id,
       service_type: serviceType,
       description,
       status: 'pending',
@@ -40,10 +72,10 @@ router.post('/hire', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error creating service request:', error);
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
-      error: 'Internal server error',
-      message: 'Failed to create service request',
+      error: error.status === 401 ? 'Unauthorized' : 'Internal server error',
+      message: error.status === 401 ? 'Invalid access token' : 'Failed to create service request',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -55,7 +87,7 @@ router.get('/services', async (req, res) => {
 
     let query = supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select('id, full_name, service_type, profile_url')
       .eq('role', 'provider');
 
     if (serviceType) {

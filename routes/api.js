@@ -2,9 +2,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Import server exports
-const server = require('../server');
-
 // Test route
 router.get('/test', (req, res) => {
   res.json({ 
@@ -13,13 +10,11 @@ router.get('/test', (req, res) => {
   });
 });
 
-// Get AWS configuration (without credentials)
+// Expose non-secret Supabase configuration status only.
 router.get('/config', (req, res) => {
   res.json({
-    region: process.env.AWS_REGION,
-    s3Bucket: process.env.S3_BUCKET,
-    cognitoUserPoolId: process.env.COGNITO_USER_POOL_ID,
-    cognitoClientId: process.env.COGNITO_CLIENT_ID
+    supabaseUrl: process.env.SUPABASE_URL || null,
+    storageBucket: process.env.SUPABASE_STORAGE_BUCKET || 'profile-pictures'
   });
 });
 

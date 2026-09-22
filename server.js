@@ -92,7 +92,7 @@ app.use((err, req, res, next) => {
     return res.status(500).json({
       success: false,
       message: 'Internal Server Error during data processing.',
-      code: 'DYNAMO_SAVE_FAILED',
+      code: 'API_REQUEST_FAILED',
       error: err.name || 'ServerError',
       details: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
