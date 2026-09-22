@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fixit | Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts for better typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Auth Container for Dynamic UI Replacement -->
+  <div id="auth-container">
+    <div class="login-container">
+      <div class="login-box">
+        <div class="login-header">
+          <h1 class="login-title">Login to Your Account</h1>
+          <p class="login-subtitle">Welcome back! Please sign in to continue</p>
+        </div>
+        
+        <form id="loginForm" class="login-form">
+          <div class="input-group">
+            <label for="email" class="input-label">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              class="form-input" 
+              placeholder="Enter your email address" 
+              required 
+            />
+          </div>
+          
+          <div class="input-group">
+            <label for="password" class="input-label">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              class="form-input" 
+              placeholder="Enter your password" 
+              required 
+            />
+          </div>
+          
+          <button type="submit" class="login-button">
+            <span class="button-text">Sign In</span>
+          </button>
+        </form>
+        
+        <div class="login-footer">
+          <p class="signup-text">
+            Don't have an account? 
+            <a href="signup.html" class="signup-link">Sign Up</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AWS SDK for Browser -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
+  <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
+
+  <!-- CRITICAL: Global Auth Check - Immediate Redirect if Already Logged In -->
+  <script>
+    (function() {
+      // STEP 1: Check for existing authentication tokens
+      const accessToken = localStorage.getItem('accessToken');
+      const idToken = localStorage.getItem('idToken');
+      const userDataStr = localStorage.getItem('userData');
+      
+      // STEP 2: If tokens exist, redirect immediately based on role
+      if (accessToken && idToken && userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr);
+          const role = userData.role;
+          
+          console.log('🔐 User already authenticated! Role:', role);
+          console.log('➡️ Redirecting to dashboard...');
+          
+          // STEP 3: Immediate role-based redirect
+          if (role === 'owner') {
+            window.location.replace('owner-dashboard.html');
+          } else if (role === 'provider') {
+            window.location.replace('provider-dashboard.html');
+          } else {
+            // Fallback for seeker or any other role
+            window.location.replace('owner-dashboard.html');
+          }
+          
+          // Stop execution of rest of script
+          throw new Error('Redirecting...');
+        } catch (e) {
+          // If redirect failed or userData is corrupt, continue to login page
+          if (e.message !== 'Redirecting...') {
+            console.error('Auth check error:', e);
+            localStorage.clear(); // Clear corrupt data
+          }
+        }
+      }
+    })();
+  </script>
+
+  <script>
+    const aws = awsService;
+    const api = apiClient;
+
+    // Get DOM elements
+    const loginForm = document.getElementById('loginForm');
+    const loginButton = document.querySelector('.login-button');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    // Add smooth focus effects
+    function addFocusEffects() {
+      const inputs = [emailInput, passwordInput];
+      
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+          if (!this.value) {
+            this.parentElement.classList.remove('focused');
+          }
+        });
+      });
+    }
+
+    // Add loading state to button
+    function setLoadingState(isLoading) {
+      if (isLoading) {
+        loginButton.classList.add('loading');
+        loginButton.disabled = true;
+      } else {
+        loginButton.classList.remove('loading');
+        loginButton.disabled = false;
+      }
+    }
+
+    // Show error message with smooth animation
+    function showError(message) {
+      // Remove existing error message
+      const existingError = document.querySelector('.error-message');
+      if (existingError) {
+        existingError.remove();
+      }
+
+      // Create new error message
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.textContent = message;
+      errorDiv.style.cssText = `
+        background: #fed7d7;
+        color: #c53030;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border: 1px solid #feb2b2;
+        animation: slideIn 0.3s ease;
+      `;
+
+      // Add CSS animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Insert error message
+      loginForm.insertBefore(errorDiv, loginForm.firstChild);
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        if (errorDiv.parentNode) {
+          errorDiv.style.animation = 'slideIn 0.3s ease reverse';
+          setTimeout(() => errorDiv.remove(), 300);
+        }
+      }, 5000);
+    }
+
+    // Form submission handler
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      // Basic validation
+      if (!email || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showError('Please enter a valid email address');
+        return;
+      }
+
+      setLoadingState(true);
+
+      try {
+        console.log('🔑 Logging in user...');
+        
+        // Make direct API call to login endpoint
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password
+          })
+        });
+
+        const data = await response.json();
+        console.log('Login response:', data);
+
+        if (response.ok && data.success) {
+          // Success - save tokens and redirect
+          console.log('✅ Authentication successful!');
+          console.log('👤 User:', data.user);
+          
+          localStorage.setItem('accessToken', data.tokens.accessToken);
+          localStorage.setItem('idToken', data.tokens.idToken);
+          localStorage.setItem('refreshToken', data.tokens.refreshToken);
+          localStorage.setItem('userData', JSON.stringify(data.user));
+          
+          // Save AWS temporary credentials for S3 and DynamoDB access
+          if (data.awsCredentials) {
+            localStorage.setItem('awsTempCredentials', JSON.stringify(data.awsCredentials));
+            console.log('🔐 AWS temporary credentials saved to localStorage');
+          }
+          
+          // FORCE IMMEDIATE REDIRECT - No delays, no UI updates
+          const role = data.user.role;
+          console.log('🎯 Forcing redirect for role:', role);
+          
+          // CRITICAL REDIRECTION FIX: Use window.location.replace for final redirect
+          if (role === 'owner') {
+            window.location.replace('owner-dashboard.html');
+          } else if (role === 'provider') {
+            window.location.replace('provider-dashboard.html');
+          } else {
+            // Fallback for any other role (seeker, etc.)
+            window.location.replace('owner-dashboard.html');
+          }
+
+        } else {
+          // Handle all error responses
+          setLoadingState(false);
+          
+          // Map Cognito errors to user-friendly messages
+          let errorMessage = data.message || 'Invalid email or password. Please try again.';
+          
+          if (data.code === 'UserNotConfirmedException' || data.error === 'UserNotConfirmedException') {
+            errorMessage = '⚠️ Your email is not verified. Please sign up again to receive a new verification code.';
+          } else if (data.code === 'NotAuthorizedException' || data.error === 'NotAuthorizedException') {
+            errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          } else if (data.code === 'UserNotFoundException') {
+            errorMessage = 'No account found with this email address.';
+          }
+          
+          showError(errorMessage);
+          console.error('Login error:', data);
+        }
+
+      } catch (error) {
+        setLoadingState(false);
+        console.error('❌ Login error:', error);
+        showError(error.message || 'Network error. Please check your connection.');
+      }
+    });
+
+    // Initialize focus effects
+    addFocusEffects();
+
+    // Add enter key support for better UX
+    [emailInput, passwordInput].forEach(input => {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          loginForm.dispatchEvent(new Event('submit'));
+        }
+      });
+    });
+  </script>
+</body>
+</html>

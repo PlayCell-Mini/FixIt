@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fixit | Provider Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts for better typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Compact Mobile Header -->
+    <div class="mobile-header">
+      <div class="mobile-header-inner">
+        <button id="mobileMenuBtn" class="icon-btn" aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div class="header-logo">FixIt</div>
+        <button id="mobileProfileBtn" class="icon-btn" aria-label="Profile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    </div>
+
+    <!-- Main Dashboard Content -->
+    <div class="dashboard-body">
+      <aside class="dashboard-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-avatar" id="sidebarAvatarProviderContainer" role="button" tabindex="0" aria-label="Edit profile">
+            <img id="sidebarAvatarProvider" src="https://via.placeholder.com/64x64/667eea/ffffff?text=P" />
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <div class="sidebar-top">
+            <!-- Top section empty for now -->
+          </div>
+          <div class="sidebar-bottom">
+            <a href="#" id="sidebarEditProfile" class="sidebar-link icon-only" title="Edit Profile" aria-label="Edit Profile">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </a>
+            <a href="#" id="logoutBtnSidebar" class="sidebar-link icon-only danger" title="Logout" aria-label="Logout" role="button" tabindex="0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16,17 21,12 16,7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="dashboard-main">
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="hire-requests">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <path d="M20 8v6"></path>
+            <path d="M23 11h-6"></path>
+          </svg>
+          Hire Requests
+          <span class="notification-badge" id="requestCount">3</span>
+        </button>
+        <button class="tab-btn" data-tab="completed-jobs">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4"></path>
+            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+            <path d="M13 12h3a2 2 0 0 1 2 2v1"></path>
+            <path d="M13 12H9a2 2 0 0 0-2 2v1"></path>
+          </svg>
+          Completed Jobs
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- Hire Requests Tab -->
+        <div class="tab-panel active" id="hire-requests">
+          <div class="panel-header">
+            <h3>New Hire Requests</h3>
+            <p>Review and respond to service requests from owners</p>
+          </div>
+          <div class="requests-grid" id="requestsGrid">
+            <!-- Sample request cards will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Completed Jobs Tab -->
+        <div class="tab-panel" id="completed-jobs">
+          <div class="panel-header">
+            <h3>Job History</h3>
+            <p>View your completed jobs and ratings</p>
+          </div>
+          <div class="jobs-grid" id="jobsGrid">
+            <!-- Sample job cards will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- AWS SDK v2 for Browser -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
+  <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
+
+  <script>
+    const aws = awsService;
+    const api = apiClient;
+
+    // Dashboard State Management
+    class ProviderDashboard {
+      constructor() {
+        this.currentTab = 'hire-requests';
+        this.isOnline = true;
+        this.requests = [];
+        this.completedJobs = [];
+        this.init();
+      }
+
+      init() {
+        this.setupEventListeners();
+        this.checkAuthState();
+        this.loadDashboardData();
+        this.startOnlineStatus();
+      }
+
+      setupEventListeners() {
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const tab = e.currentTarget.dataset.tab;
+            this.switchTab(tab);
+          });
+        });
+
+        // Mobile header: toggle sidebar
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        if (mobileMenuBtn) {
+          mobileMenuBtn.addEventListener('click', () => {
+            document.body.classList.add('sidebar-open');
+          });
+        }
+        if (sidebarOverlay) {
+          sidebarOverlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+          });
+        }
+
+        // Logout - only sidebar logout exists now
+        const logoutSidebar = document.getElementById('logoutBtnSidebar');
+        if (logoutSidebar) {
+          logoutSidebar.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Sidebar logout clicked');
+            this.logout();
+          });
+          logoutSidebar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Sidebar logout keydown');
+              this.logout();
+            }
+          });
+        } else {
+          console.error('logoutBtnSidebar element not found');
+        }
+
+        // Real-time listener for profile picture updates
+        const currentUser = aws.getCurrentUser();
+        if (currentUser) {
+          // Poll for updates every 30 seconds (or use AWS AppSync for real-time)
+          setInterval(async () => {
+            try {
+              // CRITICAL FIX: Dynamically initialize AWS before operation
+              aws.initDynamically();
+              
+              const userData = await aws.getUserProfile(currentUser.userId, 'provider');
+              if (userData && userData.profileURL) {
+                const img = document.getElementById('sidebarAvatarProvider');
+                if (img && img.src !== userData.profileURL) {
+                  img.src = userData.profileURL;
+                  console.log('Real-time update: Profile picture changed to', userData.profileURL);
+                }
+              }
+            } catch (error) {
+              console.error('Error polling profile updates:', error);
+            }
+          }, 30000);
+        }
+
+        // Sidebar: Edit Profile (icon)
+        const editSidebar = document.getElementById('sidebarEditProfile');
+        if (editSidebar) {
+          editSidebar.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Edit profile icon clicked');
+            this.editProfile();
+          });
+        } else {
+          console.error('sidebarEditProfile element not found');
+        }
+
+        // Stop propagation on avatar container; clicking avatar opens edit profile
+        const avatarContainer = document.getElementById('sidebarAvatarProviderContainer');
+        if (avatarContainer) {
+          const avatarImg = document.getElementById('sidebarAvatarProvider');
+          avatarContainer.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Avatar container clicked');
+            this.editProfile();
+          });
+          avatarContainer.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              this.editProfile();
+            }
+          });
+          if (avatarImg) {
+            avatarImg.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Avatar image clicked');
+              this.editProfile();
+            });
+          }
+        } else {
+          console.error('sidebarAvatarProviderContainer element not found');
+        }
+
+        // Settings removed from sidebar
+
+        // Mobile header profile button opens profile modal
+        const mobileProfileBtn = document.getElementById('mobileProfileBtn');
+        if (mobileProfileBtn) {
+          mobileProfileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.editProfile();
+          });
+        }
+      }
+
+      // CRITICAL: Robust session validation to prevent redirect loops
+      checkUserSession() {
+        console.log('🔍 [Provider Dashboard] Checking user session...');
+        
+        // STEP 1: Read tokens directly from localStorage
+        const accessToken = localStorage.getItem('accessToken');
+        const idToken = localStorage.getItem('idToken');
+        const userDataStr = localStorage.getItem('userData');
+        
+        // STEP 2: Validate tokens exist
+        if (!accessToken || !idToken || !userDataStr) {
+          console.error('❌ No valid session found - redirecting to login');
+          window.location.replace('login.html');
+          return false;
+        }
+        
+        // STEP 3: Parse and validate userData
+        let userData;
+        try {
+          userData = JSON.parse(userDataStr);
+        } catch (error) {
+          console.error('❌ Invalid userData in localStorage:', error);
+          localStorage.clear();
+          window.location.replace('login.html');
+          return false;
+        }
+        
+        // STEP 4: Validate user role (provider only)
+        const role = userData.role;
+        if (role !== 'provider') {
+          console.error('❌ Access denied! Invalid role:', role);
+          alert('Access denied! This dashboard is for service providers only.');
+          localStorage.clear();
+          window.location.replace('login.html');
+          return false;
+        }
+        
+        // STEP 5: Basic token expiry check (optional but recommended)
+        // JWT tokens have 3 parts: header.payload.signature
+        try {
+          const tokenParts = idToken.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            const expiry = payload.exp * 1000; // Convert to milliseconds
+            const now = Date.now();
+            
+            if (expiry < now) {
+              console.error('❌ Token expired - redirecting to login');
+              localStorage.clear();
+              window.location.replace('login.html');
+              return false;
+            }
+            
+            console.log('✅ Token valid until:', new Date(expiry).toLocaleString());
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not validate token expiry:', error);
+          // Continue anyway - token might still be valid
+        }
+        
+        console.log('✅ Session valid! User:', userData.email, 'Role:', role);
+        return true;
+      }
+
+      async checkAuthState() {
+        // Use the new robust session check
+        const sessionValid = this.checkUserSession();
+        
+        if (!sessionValid) {
+          return; // Already redirected to login
+        }
+        
+        // Get current user from localStorage (we know it exists now)
+        const currentUser = aws.getCurrentUser();
+        
+        try {
+          // Load user profile from DynamoDB
+          this.loadUserProfile(currentUser);
+        } catch (error) {
+          console.error('Error loading profile:', error);
+          // Don't redirect - profile loading can fail but session is still valid
+        }
+      }
+
+      async loadUserProfile(user) {
+        try {
+          // CRITICAL FIX: Dynamically initialize AWS before operation
+          aws.initDynamically();
+          
+          // Fetch profile data from DynamoDB
+          const profile = await aws.getUserProfile(user.userId, 'provider');
+          
+          if (profile) {
+            console.log('Loading provider profile:', profile);
+            
+            // Display profile picture if exists
+            if (profile.profileURL) {
+              const sidebarImg = document.getElementById('sidebarAvatarProvider');
+              if (sidebarImg) {
+                sidebarImg.src = profile.profileURL;
+                console.log('Profile picture loaded from database:', profile.profileURL);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error loading profile:', error);
+        }
+      }
+
+      async loadDashboardData() {
+        await this.loadHireRequests();
+        await this.loadCompletedJobs();
+      }
+
+      async loadHireRequests() {
+        try {
+          const currentUser = aws.getCurrentUser();
+          if (!currentUser) return;
+
+          // Fetch service requests from API
+          // Note: This would need a new API endpoint for provider-specific requests
+          // For now, we'll use a placeholder - you'll need to implement GET /api/requests/:providerId
+          console.log('Loading hire requests for provider:', currentUser.userId);
+          
+          // TODO: Implement API endpoint for fetching provider-specific hire requests
+          // const response = await api.get(`/api/requests/provider/${currentUser.userId}`);
+          // this.requests = response.data || [];
+          
+          // Temporary placeholder
+          this.requests = [];
+
+          this.renderHireRequests();
+          this.updateRequestCount();
+        } catch (error) {
+          console.error('Error loading hire requests:', error);
+        }
+      }
+
+      async loadCompletedJobs() {
+        try {
+          const currentUser = aws.getCurrentUser();
+          if (!currentUser) return;
+
+          // TODO: Implement API endpoint for fetching completed jobs
+          // const response = await api.get(`/api/jobs/completed/${currentUser.userId}`);
+          // this.completedJobs = response.data || [];
+          
+          // Temporary placeholder
+          this.completedJobs = [];
+
+          this.renderCompletedJobs();
+        } catch (error) {
+          console.error('Error loading completed jobs:', error);
+        }
+      }
+
+      renderHireRequests() {
+        const grid = document.getElementById('requestsGrid');
+        
+        if (this.requests.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <path d="M20 8v6"></path>
+                <path d="M23 11h-6"></path>
+              </svg>
+              <h3>No new requests</h3>
+              <p>You'll see new hire requests here when owners contact you</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = this.requests.map(request => `
+          <div class="request-card">
+            <div class="card-header">
+              <div class="owner-info">
+                <div class="owner-avatar">
+                  <img src="https://via.placeholder.com/40x40/667eea/ffffff?text=O" alt="Owner" />
+                </div>
+                <div class="owner-details">
+                  <h4>Service Request</h4>
+                  <p class="request-date">${this.formatDate(request.createdAt)}</p>
+                </div>
+              </div>
+              <div class="request-status pending">Pending</div>
+            </div>
+            <div class="card-content">
+              <div class="service-details">
+                <div class="detail-item">
+                  <span class="label">Service Type:</span>
+                  <span class="value">${request.serviceType || 'General Service'}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Description:</span>
+                  <span class="value">${request.description || 'No description provided'}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Budget:</span>
+                  <span class="value">$${request.budget || 'Not specified'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-reject" onclick="dashboard.rejectRequest('${request.id}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Reject
+              </button>
+              <button class="btn btn-accept" onclick="dashboard.acceptRequest('${request.id}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+                Accept
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderCompletedJobs() {
+        const grid = document.getElementById('jobsGrid');
+        
+        if (this.completedJobs.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M9 12l2 2 4-4"></path>
+                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                <path d="M13 12h3a2 2 0 0 1 2 2v1"></path>
+                <path d="M13 12H9a2 2 0 0 0-2 2v1"></path>
+              </svg>
+              <h3>No completed jobs</h3>
+              <p>Your completed jobs will appear here</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = this.completedJobs.map(job => `
+          <div class="job-card">
+            <div class="card-header">
+              <div class="job-info">
+                <h4>${job.serviceType || 'Service Completed'}</h4>
+                <p class="job-date">Completed ${this.formatDate(job.completedAt)}</p>
+              </div>
+              <div class="job-status completed">Completed</div>
+            </div>
+            <div class="card-content">
+              <div class="job-details">
+                <div class="detail-item">
+                  <span class="label">Payment:</span>
+                  <span class="value">$${job.payment || '0'}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Rating:</span>
+                  <div class="rating">
+                    ${this.renderStars(job.rating || 0)}
+                    <span class="rating-text">${job.rating || 0}/5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderStars(rating) {
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 !== 0;
+        let stars = '';
+        
+        for (let i = 0; i < fullStars; i++) {
+          stars += '<span class="star filled">★</span>';
+        }
+        
+        if (hasHalfStar) {
+          stars += '<span class="star half">★</span>';
+        }
+        
+        const emptyStars = 5 - Math.ceil(rating);
+        for (let i = 0; i < emptyStars; i++) {
+          stars += '<span class="star">★</span>';
+        }
+        
+        return stars;
+      }
+
+      switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+        // Update tab panels
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+          panel.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+
+        this.currentTab = tabName;
+      }
+
+      updateRequestCount() {
+        const count = this.requests.length;
+        const badge = document.getElementById('requestCount');
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+      }
+
+      startOnlineStatus() {
+        // Simulate online status
+        this.isOnline = true;
+        this.updateOnlineStatus();
+        
+        // Update online status every 30 seconds
+        setInterval(() => {
+          this.updateOnlineStatus();
+        }, 30000);
+      }
+
+      updateOnlineStatus() {
+        const indicator = document.getElementById('onlineIndicator');
+        if (this.isOnline) {
+          indicator.classList.add('online');
+          indicator.classList.remove('offline');
+        } else {
+          indicator.classList.add('offline');
+          indicator.classList.remove('online');
+        }
+      }
+
+      async acceptRequest(requestId) {
+        try {
+          // TODO: Implement API endpoint for accepting requests
+          // await api.put(`/api/requests/${requestId}/accept`);
+          
+          console.log('Accepting request:', requestId);
+          
+          this.loadHireRequests();
+          this.showNotification('Request accepted successfully!', 'success');
+        } catch (error) {
+          console.error('Error accepting request:', error);
+          this.showNotification('Failed to accept request', 'error');
+        }
+      }
+
+      async rejectRequest(requestId) {
+        try {
+          // TODO: Implement API endpoint for rejecting requests
+          // await api.put(`/api/requests/${requestId}/reject`);
+          
+          console.log('Rejecting request:', requestId);
+          
+          this.loadHireRequests();
+          this.showNotification('Request rejected', 'info');
+        } catch (error) {
+          console.error('Error rejecting request:', error);
+          this.showNotification('Failed to reject request', 'error');
+        }
+      }
+
+      editProfile() {
+        console.log('editProfile method called');
+        const modal = document.getElementById('editProfileModal');
+        const overlay = document.getElementById('modalOverlay');
+        
+        if (!modal) {
+          console.error('editProfileModal not found');
+          return;
+        }
+        if (!overlay) {
+          console.error('modalOverlay not found');
+          return;
+        }
+        
+        // Close mobile sidebar if open to avoid z-index/overlay conflicts
+        document.body.classList.remove('sidebar-open');
+
+        console.log('Opening edit profile modal');
+        
+        // Show modal and overlay
+        modal.style.display = 'block';
+        overlay.classList.add('show');
+        modal.classList.add('show');
+      }
+
+      setPricing() {
+        // Implement set pricing functionality
+        this.showNotification('Set pricing feature coming soon!', 'info');
+      }
+
+      logout() {
+        aws.signOut();
+        this.showNotification('Logged out successfully', 'success');
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 400);
+      }
+
+      showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
+          notification.classList.remove('show');
+          setTimeout(() => {
+            document.body.removeChild(notification);
+          }, 300);
+        }, 3000);
+      }
+
+      formatDate(date) {
+        if (!date) return 'Unknown date';
+        const d = date.toDate ? date.toDate() : new Date(date);
+        return d.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    }
+
+    // Create modal immediately before dashboard initialization
+    (function ensureEditProfileModal() {
+      if (document.getElementById('editProfileModal')) {
+        console.log('Edit profile modal already exists');
+        return;
+      }
+      console.log('Creating edit profile modal');
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal" id="editProfileModal" role="dialog" aria-modal="true" aria-labelledby="editProfileTitle">
+          <div class="modal-header">
+            <h3 id="editProfileTitle">Edit Profile</h3>
+            <button class="modal-close" id="closeProfileModal" aria-label="Close">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="edit-profile-grid">
+              <div class="avatar-uploader">
+                <div class="avatar-preview">
+                  <img id="editAvatarPreview" src="https://via.placeholder.com/120x120/667eea/ffffff?text=P"/>
+                </div>
+                <input type=\"file\" id=\"avatarInput\" accept=\"image/png, image/jpeg\" style=\"display: none;\" />
+                <button type=\"button\" id=\"cameraBtn\" class=\"camera-btn\" aria-label=\"Upload photo\">
+                  <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
+                    <path d=\"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\"></path>
+                    <circle cx=\"12\" cy=\"13\" r=\"4\"></circle>
+                  </svg>
+                  <span>Upload Photo</span>
+                </button>
+                <small class="hint">PNG/JPG up to ~2MB</small>
+              </div>
+              <div class="profile-fields">
+                <label class="field">
+                  <span>Name</span>
+                  <input type="text" id="editName" placeholder="Your name" />
+                </label>
+                <label class="field">
+                  <span>Service Type</span>
+                  <select id="editServiceType">
+                    <option value="painter">Painter</option>
+                    <option value="plumber">Plumber</option>
+                    <option value="welder">Welder</option>
+                    <option value="electrician">Electrician</option>
+                    <option value="carpenter">Carpenter</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Experience (years)</span>
+                  <select id="editExperience">
+                    <option value="1">1</option>
+                    <option value="2">2+</option>
+                    <option value="5">5+</option>
+                    <option value="10">10+</option>
+                  </select>
+                </label>
+                <div class="field-row">
+                  <label class="field">
+                    <span>Daily Rate (PKR Rs:)</span>
+                    <input type="number" id="editDaily" min="0" step="1" placeholder="e.g. 5000" />
+                  </label>
+                  <label class="field">
+                    <span>Hourly Rate (PKR Rs:)</span>
+                    <input type="number" id="editHourly" min="0" step="1" placeholder="e.g. 500" />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Address</span>
+                  <input type="text" id="editAddress" placeholder="Your address" />
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelProfileModal">Cancel</button>
+            <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(wrapper);
+      console.log('Edit profile modal created and appended to body');
+
+      const overlay = document.getElementById('modalOverlay');
+      const modal = document.getElementById('editProfileModal');
+      const closeBtn = document.getElementById('closeProfileModal');
+      const cancelBtn = document.getElementById('cancelProfileModal');
+      const avatarInput = document.getElementById('avatarInput');
+      const cameraBtn = document.getElementById('cameraBtn');
+      const previewImg = document.getElementById('editAvatarPreview');
+      const saveBtn = document.getElementById('saveProfileBtn');
+
+      console.log('Modal elements found:', {
+        overlay: !!overlay,
+        modal: !!modal,
+        closeBtn: !!closeBtn,
+        cancelBtn: !!cancelBtn,
+        avatarInput: !!avatarInput,
+        cameraBtn: !!cameraBtn,
+        previewImg: !!previewImg,
+        saveBtn: !!saveBtn
+      });
+
+      // Camera button triggers file input
+      cameraBtn.addEventListener('click', () => {
+        avatarInput.click();
+      });
+
+      function closeModal() {
+        console.log('Closing modal');
+        overlay.classList.remove('show');
+        modal.classList.remove('show');
+        
+        // Wait for CSS transition to complete before hiding
+        setTimeout(() => {
+          modal.style.display = 'none';
+        }, 300);
+      }
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      });
+
+      overlay.addEventListener('click', closeModal);
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      // Pre-fill fields with current data when user logs in
+      const initializeProfileForm = async () => {
+        // CRITICAL FIX: Dynamically initialize AWS before operation
+        try {
+          aws.initDynamically();
+        } catch (error) {
+          dashboard.showNotification('AWS not initialized: ' + error.message, 'error');
+          return;
+        }
+        
+        // Get access token from localStorage
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+          dashboard.showNotification('You must be logged in to edit your profile', 'error');
+          return;
+        }
+        
+        try {
+          console.log('📋 Loading profile data from API...');
+          
+          // Fetch profile data from backend API
+          const response = await fetch('/api/profile/details', {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Failed to load profile data');
+          }
+          
+          const profileData = result.data;
+          
+          if (profileData) {
+            document.getElementById('editName').value = profileData.name || '';
+            document.getElementById('editServiceType').value = (profileData.serviceType || 'painter');
+            document.getElementById('editExperience').value = (profileData.experience || '5').toString().replace('+','');
+            document.getElementById('editDaily').value = profileData.dailyRate || '';
+            document.getElementById('editHourly').value = profileData.hourlyRate || '';
+            document.getElementById('editAddress').value = profileData.address || '';
+            
+            // Load existing profile picture to modal preview
+            if (profileData.profileURL) {
+              previewImg.src = profileData.profileURL;
+            }
+          }
+          
+          console.log('✅ Profile data loaded successfully');
+        } catch (error) {
+          console.error('Error loading profile data:', error);
+          dashboard.showNotification('Failed to load profile data: ' + error.message, 'error');
+        }
+      };
+      
+      // Initialize form when modal opens
+      setTimeout(initializeProfileForm, 500);
+
+      // Preview on select and update immediately
+      avatarInput.addEventListener('change', () => {
+        const file = avatarInput.files && avatarInput.files[0];
+        if (!file) return;
+        
+        // Validate file type immediately
+        if (!file.type.match(/image\/(png|jpeg|jpg)/)) {
+          dashboard.showNotification('Only PNG and JPG images are allowed', 'error');
+          avatarInput.value = '';
+          return;
+        }
+        
+        // Validate file size immediately
+        if (file.size > 2 * 1024 * 1024) {
+          dashboard.showNotification('Image size must be less than 2MB', 'error');
+          avatarInput.value = '';
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // Update preview in modal
+          previewImg.src = e.target.result;
+          console.log('Image preview loaded');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // STEP 2 & 3: Save profile with image upload
+      saveBtn.addEventListener('click', async () => {
+        // CRITICAL FIX: Dynamically initialize AWS before operation
+        try {
+          aws.initDynamically();
+        } catch (error) {
+          dashboard.showNotification('AWS not initialized: ' + error.message, 'error');
+          return;
+        }
+        
+        // Get access token from localStorage
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+          dashboard.showNotification('You must be logged in to update your profile', 'error');
+          return;
+        }
+
+        const name = (document.getElementById('editName').value || '').trim();
+        const serviceType = document.getElementById('editServiceType').value;
+        const experience = document.getElementById('editExperience').value;
+        const dailyRate = Number(document.getElementById('editDaily').value || 0);
+        const hourlyRate = Number(document.getElementById('editHourly').value || 0);
+        const address = (document.getElementById('editAddress').value || '').trim();
+
+        // Validation
+        if (!name) {
+          dashboard.showNotification('Name is required', 'error');
+          return;
+        }
+
+        if (name.length < 2) {
+          dashboard.showNotification('Name must be at least 2 characters', 'error');
+          return;
+        }
+
+        if (!serviceType) {
+          dashboard.showNotification('Please select a service type', 'error');
+          return;
+        }
+
+        if (dailyRate < 0 || hourlyRate < 0) {
+          dashboard.showNotification('Rates cannot be negative', 'error');
+          return;
+        }
+
+        // Set loading state
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.style.opacity = '0.7';
+        saveBtn.style.cursor = 'not-allowed';
+
+        const updateData = {
+          name,
+          serviceType,
+          experience,
+          dailyRate,
+          hourlyRate,
+          address,
+          updatedAt: new Date().toISOString()
+        };
+
+        try {
+          const file = avatarInput.files && avatarInput.files[0];
+          
+          if (file) {
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+              throw new Error('Image size must be less than 5MB');
+            }
+
+            // Validate file type (PNG/JPG only)
+            if (!file.type.match(/image\/(png|jpeg|jpg)/)) {
+              throw new Error('Only PNG and JPG images are allowed');
+            }
+
+            console.log('📤 Uploading image to backend S3 API...');
+            
+            // Upload file to backend S3 API
+            const uploadResponse = await api.uploadProfilePicture(file, currentUser.userId);
+            
+            console.log('✅ Image uploaded successfully. URL:', uploadResponse.fileUrl);
+            
+            // Add profileURL to updateData (will be saved to DynamoDB)
+            updateData.profileURL = uploadResponse.fileUrl;
+          }
+
+          console.log('💾 Saving profile to DynamoDB providers table via API...');
+          
+          // Get access token from localStorage
+          const accessToken = localStorage.getItem('accessToken');
+          if (!accessToken) {
+            throw new Error('Access token not found');
+          }
+          
+          // Save data to DynamoDB via backend API
+          const response = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(updateData)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Failed to update profile');
+          }
+          
+          console.log('✅ Profile data saved successfully!');
+          
+          // UI update after save
+          if (updateData.profileURL) {
+            // Update sidebar avatar with new URL
+            const sidebarImg = document.getElementById('sidebarAvatarProvider');
+            if (sidebarImg) {
+              sidebarImg.src = updateData.profileURL;
+              console.log('✅ Sidebar avatar updated with new URL');
+            }
+          }
+
+          // Show success toast
+          dashboard.showNotification('Profile updated successfully!', 'success');
+          
+          // Close EditProfile popup
+          closeModal();
+          
+        } catch (err) {
+          console.error('❌ Error updating profile:', err);
+          const errorMessage = err.message || 'Failed to update profile. Please try again.';
+          dashboard.showNotification(errorMessage, 'error');
+        } finally {
+          // Reset loading state
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+          saveBtn.style.opacity = '1';
+          saveBtn.style.cursor = 'pointer';
+          console.log('Loading state reset');
+        }
+      });
+    })();
+
+    // Initialize dashboard after modal is created
+    const dashboard = new ProviderDashboard();
+  </script>
+</body>
+</html>

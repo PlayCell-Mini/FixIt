@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fixit | Sign Up</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts for better typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Minimal styles for verification modal */
+    .verif-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .verif-modal {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      box-sizing: border-box;
+      transform: translateY(10px);
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    .verif-overlay.show { display: flex; }
+    .verif-modal h3 { margin: 0 0 8px 0; font-size: 20px; }
+    .verif-modal p { margin: 0 0 14px 0; color: #555; font-size: 14px; }
+    .verif-code-input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 20px;
+      letter-spacing: 6px;
+      text-align: center;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+    .verif-actions {
+      margin-top: 14px;
+      display:flex;
+      gap:10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .verif-btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .verif-btn.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+    .verif-btn.ghost { background: transparent; color: #333; border: 1px solid #e6e6e6; }
+    .verif-resend { font-size: 13px; color: #666; text-decoration: underline; background: none; border: none; cursor: pointer; }
+    .small-muted { font-size: 13px; color: #777; margin-top:8px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="login-header">
+        <h1 class="login-title">Create Your Account</h1>
+        <p class="login-subtitle">Join us today and get started with your journey</p>
+      </div>
+      
+      <form id="signupForm" class="login-form">
+        <div class="form-grid">
+          <div class="input-group">
+            <label for="fullName" class="input-label">Full Name</label>
+            <input 
+              type="text" 
+              id="fullName" 
+              class="form-input" 
+              placeholder="Enter your full name" 
+              required 
+            />
+          </div>
+          
+          <div class="input-group">
+            <label for="email" class="input-label">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              class="form-input" 
+              placeholder="Enter your email address" 
+              required 
+            />
+          </div>
+        </div>
+        
+        <div class="form-grid">
+          <div class="input-group">
+            <label for="password" class="input-label">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              class="form-input" 
+              placeholder="Create a strong password" 
+              required 
+            />
+          </div>
+          
+          <div class="input-group">
+            <label for="confirmPassword" class="input-label">Confirm Password</label>
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              class="form-input" 
+              placeholder="Confirm your password" 
+              required 
+            />
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label for="address-input" class="input-label">Address</label>
+          <input 
+            type="text" 
+            id="address-input" 
+            class="form-input" 
+            placeholder="Enter your full address" 
+            required 
+          />
+        </div>
+        
+        <div class="input-group">
+          <label for="role" class="input-label">I am a:</label>
+          <select id="role" class="form-select" required>
+            <option value="">Select your role</option>
+            <option value="owner">Service Owner</option>
+            <option value="provider">Service Provider</option>
+          </select>
+        </div>
+        
+        <!-- Service Type Selection - Hidden by default, shown only for providers -->
+        <div id="serviceTypeSection" class="input-group" style="display: none;">
+          <label class="input-label">Service Type</label>
+          <div class="service-type-groups">
+            <!-- Home Repair Group -->
+            <div class="service-group">
+              <h4 class="service-group-title">🏠 Home Repair</h4>
+              <div class="service-options">
+                <button type="button" class="service-option" data-value="Plumber">Plumber</button>
+                <button type="button" class="service-option" data-value="Electrician">Electrician</button>
+                <button type="button" class="service-option" data-value="Painter">Painter</button>
+                <button type="button" class="service-option" data-value="AC Technician">AC Technician</button>
+                <button type="button" class="service-option" data-value="CCTV Installer">CCTV Installer</button>
+              </div>
+            </div>
+            
+            <!-- Vehicle Repair Group -->
+            <div class="service-group">
+              <h4 class="service-group-title">🚗 Vehicle Repair</h4>
+              <div class="service-options">
+                <button type="button" class="service-option" data-value="Bike Mechanic">Bike Mechanic</button>
+                <button type="button" class="service-option" data-value="Car Mechanic">Car Mechanic</button>
+              </div>
+            </div>
+            
+            <!-- Construction & Labour Group -->
+            <div class="service-group">
+              <h4 class="service-group-title">🧱 Construction & Labour</h4>
+              <div class="service-options">
+                <button type="button" class="service-option" data-value="Contractor">Contractor</button>
+                <button type="button" class="service-option" data-value="Welder">Welder</button>
+                <button type="button" class="service-option" data-value="Labour Work">Labour Work</button>
+                <button type="button" class="service-option" data-value="Tiler">Tiler (floor work)</button>
+                <button type="button" class="service-option" data-value="Ceiling Expert">Ceiling Expert</button>
+              </div>
+            </div>
+          </div>
+          <!-- Hidden input to store the selected service type -->
+          <input type="hidden" id="selectedServiceType" name="serviceType" value="">
+        </div>
+        
+        <div class="button-container">
+          <button type="submit" class="login-button" id="signupSubmitBtn">
+            <span class="button-text">Send Verification Code</span>
+          </button>
+        </div>
+      </form>
+      
+      <div class="login-footer">
+        <p class="signup-text">
+          Already have an account? 
+          <a href="login.html" class="signup-link">Sign In</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification Modal (hidden by default) -->
+  <div id="verifOverlay" class="verif-overlay" aria-hidden="true">
+    <div class="verif-modal" role="dialog" aria-modal="true" aria-labelledby="verifTitle">
+      <div style="text-align:center; margin-bottom:10px;">
+        <div style="font-size:34px;">📧</div>
+      </div>
+      <h3 id="verifTitle">Email Verification Required</h3>
+      <p id="verifSubtitle">We sent a 6-digit code to your email <strong id="verifEmailText"></strong></p>
+
+      <input type="text" id="verifCodeInput" class="verif-code-input" placeholder="Enter 6-digit code" maxlength="6" autocomplete="off" inputmode="numeric" pattern="[0-9]*" />
+
+      <div class="small-muted" id="verifMessage">Check your inbox (and spam). The code expires in a few minutes.</div>
+
+      <div class="verif-actions">
+        <button id="verifConfirmBtn" class="verif-btn primary">✅ Verify Email</button>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+          <button id="verifResendBtn" class="verif-resend">Resend Code</button>
+          <button id="verifCancelBtn" class="verif-btn ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AWS SDK for Browser -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1450.0.min.js"></script>
+  <script src="awsConfig.js"></script>
+  <script src="apiClient.js"></script>
+
+  <script>
+    const aws = awsService;
+    const api = apiClient;
+
+    // Get DOM elements
+    const signupForm = document.getElementById('signupForm');
+    const signupButton = document.querySelector('.login-button');
+    const fullNameInput = document.getElementById('fullName');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const addressInput = document.getElementById('address-input');
+    const roleSelect = document.getElementById('role');
+    const serviceTypeSection = document.getElementById('serviceTypeSection');
+    const serviceOptions = document.querySelectorAll('.service-option');
+    const selectedServiceTypeInput = document.getElementById('selectedServiceType');
+
+    const verifOverlay = document.getElementById('verifOverlay');
+    const verifEmailText = document.getElementById('verifEmailText');
+    const verifCodeInput = document.getElementById('verifCodeInput');
+    const verifConfirmBtn = document.getElementById('verifConfirmBtn');
+    const verifResendBtn = document.getElementById('verifResendBtn');
+    const verifCancelBtn = document.getElementById('verifCancelBtn');
+    const verifMessage = document.getElementById('verifMessage');
+    const signupSubmitBtn = document.getElementById('signupSubmitBtn');
+
+    // State management for signup flow
+    let signupState = {
+      step: 'signup', // 'signup' | 'verification'
+      email: null,
+      password: null,
+      isLoading: false
+    };
+
+    // Function to control visibility of service type section based on role selection
+    function toggleServiceTypeSection() {
+      if (roleSelect.value === 'provider') {
+        serviceTypeSection.style.display = 'block';
+      } else {
+        serviceTypeSection.style.display = 'none';
+        // Clear any previously selected service type
+        selectedServiceTypeInput.value = '';
+        // Remove selected class from all options
+        serviceOptions.forEach(option => option.classList.remove('selected'));
+      }
+    }
+
+    // Add event listener to role select to toggle service type section
+    roleSelect.addEventListener('change', toggleServiceTypeSection);
+
+    // Add event listeners to service options for selection
+    serviceOptions.forEach(option => {
+      option.addEventListener('click', function() {
+        // Remove selected class from all options
+        serviceOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        // Add selected class to clicked option
+        this.classList.add('selected');
+        
+        // CRITICAL: Update the hidden input field with the selected service type
+        const selectedValue = this.getAttribute('data-value');
+        selectedServiceTypeInput.value = selectedValue;
+        
+        // Log the selection for debugging
+        console.log('🔧 Service type selected:', selectedValue);
+        console.log('💾 Service type stored in hidden input:', selectedServiceTypeInput.value);
+      });
+    });
+
+    // Add smooth focus effects
+    function addFocusEffects() {
+      const inputs = [fullNameInput, emailInput, passwordInput, confirmPasswordInput, addressInput, roleSelect];
+      
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+          if (!this.value) {
+            this.parentElement.classList.remove('focused');
+          }
+        });
+      });
+    }
+
+    // Add loading state to button
+    function setLoadingState(isLoading, buttonText = 'Send Verification Code') {
+      signupState.isLoading = isLoading;
+      if (isLoading) {
+        signupButton.classList.add('loading');
+        signupButton.disabled = true;
+        signupButton.querySelector('.button-text').textContent = 'Sending Code...';
+      } else {
+        signupButton.classList.remove('loading');
+        signupButton.disabled = false;
+        signupButton.querySelector('.button-text').textContent = buttonText;
+      }
+    }
+
+    // Show error message with smooth animation
+    function showError(message) {
+      // Remove existing error message
+      const existingError = document.querySelector('.error-message');
+      if (existingError) {
+        existingError.remove();
+      }
+
+      // Create new error message
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.textContent = message;
+      errorDiv.style.cssText = `
+        background: #fed7d7;
+        color: #c53030;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border: 1px solid #feb2b2;
+        animation: slideIn 0.3s ease;
+      `;
+
+      // Add CSS animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Insert error message
+      signupForm.insertBefore(errorDiv, signupForm.firstChild);
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        if (errorDiv.parentNode) {
+          errorDiv.style.animation = 'slideIn 0.3s ease reverse';
+          setTimeout(() => errorDiv.remove(), 300);
+        }
+      }, 5000);
+    }
+
+    // Show success message
+    function showSuccess(message) {
+      const successDiv = document.createElement('div');
+      successDiv.className = 'success-message';
+      successDiv.textContent = message;
+      successDiv.style.cssText = `
+        background: #c6f6d5;
+        color: #22543d;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        border: 1px solid #9ae6b4;
+        animation: slideIn 0.3s ease;
+      `;
+
+      signupForm.insertBefore(successDiv, signupForm.firstChild);
+    }
+
+    // Password strength validation
+    function validatePassword(password) {
+      const minLength = 8;
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumbers = /\d/.test(password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      if (password.length < minLength) {
+        return 'Password must be at least 8 characters long';
+      }
+      if (!hasUpperCase) {
+        return 'Password must contain at least one uppercase letter';
+      }
+      if (!hasLowerCase) {
+        return 'Password must contain at least one lowercase letter';
+      }
+      if (!hasNumbers) {
+        return 'Password must contain at least one number';
+      }
+      if (!hasSpecialChar) {
+        return 'Password must contain at least one special character';
+      }
+      return null;
+    }
+
+    // Real-time password confirmation validation
+    function validatePasswordMatch() {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      
+      if (confirmPassword && password !== confirmPassword) {
+        confirmPasswordInput.style.borderColor = '#e53e3e';
+        return false;
+      } else {
+        confirmPasswordInput.style.borderColor = '#e2e8f0';
+        return true;
+      }
+    }
+
+    // Add real-time validation
+    confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+    passwordInput.addEventListener('input', validatePasswordMatch);
+
+    // Verification modal controls
+    function openVerificationModal(email) {
+      signupState.step = 'verification';
+      signupState.email = email;
+      
+      verifEmailText.textContent = email;
+      verifCodeInput.value = '';
+      verifMessage.textContent = 'Check your inbox (and spam folder). The code expires in a few minutes.';
+      verifOverlay.classList.add('show');
+      verifOverlay.setAttribute('aria-hidden', 'false');
+      
+      // Reset resend button state
+      verifResendBtn.disabled = false;
+      verifResendBtn.textContent = 'Resend Code';
+      
+      setTimeout(() => verifCodeInput.focus(), 80);
+    }
+
+    function closeVerificationModal() {
+      verifOverlay.classList.remove('show');
+      verifOverlay.setAttribute('aria-hidden', 'true');
+      signupState.step = 'signup';
+      signupState.email = null;
+    }
+
+    // Resend code with improved UX
+    async function resendVerificationCode(email) {
+      if (!email) {
+        verifMessage.textContent = '❌ Email address not found';
+        return;
+      }
+
+      try {
+        verifResendBtn.disabled = true;
+        verifResendBtn.textContent = 'Sending...';
+        verifMessage.textContent = '⏳ Sending verification code...';
+        
+        const res = await fetch('/api/auth/resend-confirmation', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email })
+        });
+        
+        const d = await res.json();
+        
+        if (res.ok && d.success) {
+          verifMessage.textContent = '✅ Code resent successfully! Check your inbox.';
+          
+          // Add cooldown to prevent spam (60 seconds)
+          let cooldown = 60;
+          verifResendBtn.disabled = true;
+          const cooldownInterval = setInterval(() => {
+            cooldown--;
+            verifResendBtn.textContent = `Resend Code (${cooldown}s)`;
+            if (cooldown <= 0) {
+              clearInterval(cooldownInterval);
+              verifResendBtn.disabled = false;
+              verifResendBtn.textContent = 'Resend Code';
+            }
+          }, 1000);
+        } else {
+          verifMessage.textContent = '❌ ' + (d.message || 'Failed to resend. Try again later.');
+          verifResendBtn.disabled = false;
+          verifResendBtn.textContent = 'Resend Code';
+        }
+      } catch (err) {
+        verifMessage.textContent = '❌ Network error. Please try again.';
+        console.error('Resend error', err);
+        verifResendBtn.disabled = false;
+        verifResendBtn.textContent = 'Resend Code';
+      }
+    }
+
+    // Setup verification listeners
+    // Real-time validation: only allow numbers in verification code
+    verifCodeInput.addEventListener('input', (e) => {
+      // Remove non-numeric characters
+      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+      
+      // Update border color based on input length
+      if (e.target.value.length === 6) {
+        e.target.style.borderColor = '#48bb78';
+        e.target.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.2)';
+      } else if (e.target.value.length > 0) {
+        e.target.style.borderColor = '#667eea';
+        e.target.style.boxShadow = 'none';
+      } else {
+        e.target.style.borderColor = '#ddd';
+        e.target.style.boxShadow = 'none';
+      }
+    });
+
+    // Support paste event for OTP autofill
+    verifCodeInput.addEventListener('paste', (e) => {
+      // Allow the paste to happen
+      setTimeout(() => {
+        // Clean up pasted content (remove non-numeric)
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+        
+        // Trigger input event to update visual feedback
+        e.target.dispatchEvent(new Event('input'));
+        
+        // If 6 digits, auto-submit
+        if (e.target.value.length === 6) {
+          console.log('📋 OTP pasted successfully, auto-verifying...');
+          const email = verifEmailText.textContent;
+          handleVerificationFromSignup(email);
+        }
+      }, 10);
+    });
+
+    verifConfirmBtn.addEventListener('click', async () => {
+      const email = verifEmailText.textContent;
+      await handleVerificationFromSignup(email);
+    });
+
+    verifCodeInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const email = verifEmailText.textContent;
+        await handleVerificationFromSignup(email);
+      }
+    });
+
+    verifResendBtn.addEventListener('click', () => {
+      const email = verifEmailText.textContent;
+      resendVerificationCode(email);
+    });
+
+    verifCancelBtn.addEventListener('click', () => {
+      closeVerificationModal();
+    });
+
+    // Handle confirmation and auto-login (used by modal after signup)
+    async function handleVerificationFromSignup(email) {
+      const verificationCode = verifCodeInput.value.trim();
+      
+      // Validate code format
+      if (!verificationCode) {
+        verifMessage.textContent = '❌ Please enter the 6-digit verification code';
+        return;
+      }
+      
+      if (verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
+        verifMessage.textContent = '❌ Code must be exactly 6 digits';
+        return;
+      }
+
+      // Disable UI during verification
+      verifConfirmBtn.disabled = true;
+      verifConfirmBtn.textContent = '⏳ Verifying...';
+      verifCodeInput.disabled = true;
+      verifMessage.textContent = '⏳ Verifying your code...';
+
+      try {
+        const response = await fetch('/api/auth/confirm', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email, verificationCode })
+        });
+        
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          verifMessage.textContent = '✅ Email verified successfully! Logging you in...';
+          verifConfirmBtn.textContent = '✅ Verified!';
+
+          // Try auto-login if we stored password in sessionStorage
+          const tempPassword = sessionStorage.getItem('temp_signup_password');
+          
+          console.log('🔍 ========== AUTO-LOGIN DEBUG ==========');
+          console.log('📧 Email:', email);
+          console.log('🔑 tempPassword exists:', !!tempPassword);
+          console.log('🔑 tempPassword length:', tempPassword ? tempPassword.length : 0);
+          console.log('🔑 tempPassword value:', tempPassword ? '***' + tempPassword.slice(-3) : 'NULL');
+          console.log('📦 All sessionStorage keys:', Object.keys(sessionStorage));
+          
+          if (tempPassword) {
+            try {
+              console.log('🚀 Attempting auto-login...');
+              
+              const loginPayload = {
+                email: email,
+                password: tempPassword
+              };
+              
+              console.log('📤 Login payload:', {
+                email: loginPayload.email,
+                passwordLength: loginPayload.password.length
+              });
+              
+              // Attempt automatic login
+              const loginResp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(loginPayload)
+              });
+              
+              console.log('📥 Login response status:', loginResp.status);
+              console.log('📥 Login response ok:', loginResp.ok);
+              
+              const loginData = await loginResp.json();
+              console.log('📥 Login response data:', loginData);
+
+              if (loginResp.ok && loginData.success) {
+                verifMessage.textContent = '✅ Success! Redirecting to dashboard...';
+                
+                // Save tokens & credentials
+                localStorage.setItem('accessToken', loginData.tokens.accessToken);
+                localStorage.setItem('idToken', loginData.tokens.idToken);
+                localStorage.setItem('refreshToken', loginData.tokens.refreshToken);
+                localStorage.setItem('userData', JSON.stringify(loginData.user));
+                
+                if (loginData.awsCredentials) {
+                  localStorage.setItem('awsTempCredentials', JSON.stringify(loginData.awsCredentials));
+                  console.log('🔐 AWS credentials saved');
+                }
+                
+                // Clear temporary password
+                sessionStorage.removeItem('temp_signup_password');
+
+                // Role-based redirect
+                const role = loginData.user.role;
+                setTimeout(() => {
+                  if (role === 'owner') {
+                    window.location.replace('owner-dashboard.html');
+                  } else if (role === 'provider') {
+                    window.location.replace('provider-dashboard.html');
+                  } else {
+                    window.location.replace('owner-dashboard.html');
+                  }
+                }, 800);
+                
+                return;
+              } else {
+                console.error('❌ Auto-login failed with response:', loginData);
+                console.error('❌ Login error code:', loginData.code);
+                console.error('❌ Login error message:', loginData.message);
+                throw new Error(loginData.message || 'Login failed after verification');
+              }
+            } catch (loginError) {
+              console.error('❌ Auto-login exception:', loginError);
+              console.warn('⚠️ Redirecting to login page due to auto-login failure');
+            }
+          }
+          
+          // If auto-login failed or no password stored
+          closeVerificationModal();
+          showSuccess('✅ Email verified successfully! You can now log in.');
+          sessionStorage.removeItem('temp_signup_password');
+          
+          setTimeout(() => {
+            window.location.replace('login.html');
+          }, 1500);
+          
+        } else {
+          // Verification failed
+          let errorMsg = 'Verification failed. Please try again.';
+          
+          // Handle specific Cognito errors
+          if (data.code === 'CodeMismatchException') {
+            errorMsg = '❌ Invalid code. Please check and try again.';
+          } else if (data.code === 'ExpiredCodeException') {
+            errorMsg = '❌ Code expired. Please click "Resend Code" to get a new one.';
+          } else if (data.code === 'NotAuthorizedException') {
+            errorMsg = '✅ User already confirmed. Redirecting to login...';
+            closeVerificationModal();
+            setTimeout(() => window.location.replace('login.html'), 1500);
+            return;
+          } else if (data.message) {
+            errorMsg = '❌ ' + data.message;
+          }
+          
+          verifMessage.textContent = errorMsg;
+          verifConfirmBtn.disabled = false;
+          verifConfirmBtn.textContent = '✅ Verify Email';
+          verifCodeInput.disabled = false;
+          verifCodeInput.value = '';
+          verifCodeInput.focus();
+        }
+      } catch (err) {
+        console.error('Verification error:', err);
+        verifMessage.textContent = '❌ Network error. Please try again.';
+        verifConfirmBtn.disabled = false;
+        verifConfirmBtn.textContent = '✅ Verify Email';
+        verifCodeInput.disabled = false;
+      }
+    }
+
+    // Form submission handler - STEP 1: Send verification code
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Don't allow submission if already loading
+      if (signupState.isLoading) {
+        return;
+      }
+      
+      const fullName = fullNameInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      const address = addressInput.value.trim();
+      const role = roleSelect.value;
+      
+      // CRITICAL: Ensure we always get the latest value from the hidden input
+      const serviceType = selectedServiceTypeInput.value || '';
+      
+      console.log('📋 Form values:', { fullName, email, role, serviceType });
+
+      // Basic validation
+      if (!fullName || !email || !password || !confirmPassword || !address || !role) {
+        showError('Please fill in all required fields');
+        return;
+      }
+
+      // Full name validation
+      if (fullName.length < 2) {
+        showError('Please enter a valid full name (at least 2 characters)');
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showError('Please enter a valid email address');
+        return;
+      }
+
+      // Password validation
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        showError(passwordError);
+        return;
+      }
+
+      // Password confirmation validation
+      if (password !== confirmPassword) {
+        showError('Passwords do not match');
+        return;
+      }
+
+      // Address validation
+      if (address.length < 10) {
+        showError('Please enter a complete address (at least 10 characters)');
+        return;
+      }
+
+      // CRITICAL VALIDATION: Service type validation for providers
+      if (role === 'provider') {
+        if (!serviceType || serviceType.trim() === '') {
+          showError('Please select a service type');
+          serviceTypeSection.style.border = '2px solid #e53e3e';
+          serviceTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+
+      // Set loading state
+      setLoadingState(true);
+
+      try {
+        console.log('📝 Step 1: Creating user account...');
+        
+        const signupData = {
+          fullName: fullName,
+          email: email,
+          password: password,
+          role: role,
+          address: address,
+          serviceType: role === 'provider' ? serviceType.trim() : null
+        };
+        
+        console.log('📤 Sending signup request:', signupData);
+
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(signupData)
+        });
+
+        // Parse response safely
+        const rawText = await response.text();
+        let data = {};
+        try {
+          data = rawText ? JSON.parse(rawText) : {};
+        } catch (parseErr) {
+          console.warn('Signup response not JSON:', parseErr, rawText);
+          data = { rawText };
+        }
+
+        console.log('📥 Signup Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          data: data
+        });
+
+        // Check if backend indicates success
+        const backendIndicatesSuccess = data && data.success === true;
+
+        // CRITICAL FIX: Handle case where user already exists but is not confirmed
+        const userExistsNotConfirmed = 
+          data.code === 'UsernameExistsException' ||
+          (data.message && /already exists/i.test(data.message));
+
+        if (response.ok || backendIndicatesSuccess) {
+          console.log('✅ User account created successfully', { status: response.status, data });
+
+          // Store password temporarily for auto-login after verification
+          sessionStorage.setItem('temp_signup_password', password);
+
+          // Check if email confirmation is required
+          const needsConfirmation = 
+            data.requiresConfirmation === true ||
+            data.code === 'USER_NOT_CONFIRMED' ||
+            (data.message && /verification|confirm/i.test(data.message));
+
+          console.log('🔍 needsConfirmation check:', {
+            requiresConfirmation: data.requiresConfirmation,
+            code: data.code,
+            message: data.message,
+            needsConfirmation
+          });
+
+          if (needsConfirmation) {
+            // STEP 2: Show verification modal
+            console.log('📧 Opening verification modal for email:', email);
+            
+            // Prevent duplicate modal openings
+            if (signupState.step !== 'verification') {
+              openVerificationModal(email);
+              showSuccess('✅ Account created! Please check your email for the 6-digit verification code.');
+            } else {
+              console.warn('⚠️ Verification modal already open');
+            }
+            
+            setLoadingState(false, 'Send Verification Code');
+          } else {
+            // User confirmed automatically (rare case)
+            console.log('✅ User auto-confirmed by Cognito (no verification needed)');
+            showSuccess('✅ Account created successfully! Redirecting to login...');
+            sessionStorage.removeItem('temp_signup_password');
+            setLoadingState(false, 'Send Verification Code');
+            
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 1500);
+          }
+
+        } else if (userExistsNotConfirmed) {
+          // CRITICAL FIX: User already exists but not confirmed
+          console.log('⚠️ User exists but not confirmed, opening verification modal');
+          
+          // Store password for auto-login after verification
+          sessionStorage.setItem('temp_signup_password', password);
+          
+          // Open verification modal anyway
+          if (signupState.step !== 'verification') {
+            openVerificationModal(email);
+            showSuccess('⚠️ This email is already registered but not verified. Please enter the verification code.');
+          }
+          
+          setLoadingState(false, 'Send Verification Code');
+          
+        } else {
+          // Handle error responses
+          console.warn('Signup failed:', response.status, data);
+
+          // Map error codes to user-friendly messages
+          if (data.code === 'UsernameExistsException' || (data.message && /already exists/i.test(data.message))) {
+            // CRITICAL: Don't throw error, open verification modal instead
+            console.log('⚠️ User exists, allowing resend verification');
+            sessionStorage.setItem('temp_signup_password', password);
+            
+            if (signupState.step !== 'verification') {
+              openVerificationModal(email);
+              showSuccess('⚠️ Account exists but not verified. Please check your email for the verification code.');
+            }
+            
+            setLoadingState(false, 'Send Verification Code');
+            return; // Don't throw error, user can verify
+          }
+
+          if (data.code === 'InvalidParameterException') {
+            throw new Error('Invalid email format. Please enter a valid email address.');
+          }
+
+          if (data.code === 'InvalidPasswordException') {
+            throw new Error('Password is too weak. Please choose a stronger password (min 8 characters, mix of uppercase, lowercase, numbers, and special characters).');
+          }
+
+          if (data.code === 'TooManyRequestsException') {
+            throw new Error('Too many signup attempts. Please wait a few minutes and try again.');
+          }
+
+          // Use server message if available
+          if (data.message) {
+            throw new Error(data.message);
+          }
+
+          throw new Error('Failed to create account. Please try again.');
+        }
+
+      } catch (error) {
+        setLoadingState(false, 'Send Verification Code');
+        
+        // Extract error message
+        let errorMessage = 'An unexpected error occurred. Please try again.';
+        
+        if (error && error.message) {
+          errorMessage = error.message;
+        } else if (error && typeof error === 'string') {
+          errorMessage = error;
+        }
+        
+        showError(errorMessage);
+        console.error('Signup error:', error);
+      }
+    });
+
+    // Initialize focus effects
+    addFocusEffects();
+
+    // Add enter key support for better UX
+    [fullNameInput, emailInput, passwordInput, confirmPasswordInput, addressInput, roleSelect].forEach(input => {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          signupForm.dispatchEvent(new Event('submit'));
+        }
+      });
+    });
+  </script>
+</body>
+</html>
